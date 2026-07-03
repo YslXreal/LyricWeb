@@ -1,38 +1,25 @@
-// Đổi version này mỗi khi bạn cập nhật code trên Github (ví dụ v13 -> v14)
-const CACHE_NAME = 'ysl-core-v13'; 
+// FILE NÀY CHỈ CÓ 1 NHIỆM VỤ: TIÊU DIỆT TOÀN BỘ CACHE CŨ VÀ TỰ HỦY BẢN THÂN
 
-const ASSETS = [
-  './',
-  './index.html',
-  './manifest.json'
-];
-
-// Cài đặt và đưa vào Cache mới
-self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
-  );
+self.addEventListener('install', function(e) {
   self.skipWaiting(); // Ép kích hoạt ngay lập tức
 });
 
-// XÓA CACHE CŨ KHI CÓ BẢN MỚI
-self.addEventListener('activate', (e) => {
+self.addEventListener('activate', function(e) {
+  // 1. Quét sạch sẽ toàn bộ kho chứa Cache cũ
   e.waitUntil(
-    caches.keys().then((keyList) => {
-      return Promise.all(keyList.map((key) => {
-        if (key !== CACHE_NAME) {
-          console.log('[YSL SW] Đang xóa bộ nhớ đệm cũ:', key);
-          return caches.delete(key);
-        }
+    caches.keys().then(function(keyList) {
+      return Promise.all(keyList.map(function(key) {
+        console.log('[YSL CLEANER] Đã tiêu diệt cache:', key);
+        return caches.delete(key);
       }));
     })
   );
+  
+  // 2. Ép trình duyệt phải tải phiên bản web mới nhất từ máy chủ (Github)
   self.clients.claim();
 });
 
-// Ưu tiên tải từ mạng trước (Network First), nếu mất mạng mới xài Cache
-self.addEventListener('fetch', (e) => {
-  e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
-  );
+// 3. Cho phép TẤT CẢ các luồng mạng chạy thẳng, không giữ lại cái gì, tránh lỗi "null"
+self.addEventListener('fetch', function(e) {
+  e.respondWith(fetch(e.request));
 });
