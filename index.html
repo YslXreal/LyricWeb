@@ -1,6 +1,860 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Meta tags cho PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="YSL Audio">
+    
+    <link rel="manifest" href="manifest.json">
+    <title>YSL AUDIO // Cloud Engine</title>
+    
+    <!-- Đột phá Font chữ: Sang trọng (Inter) và Kỹ thuật (JetBrains Mono) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-⚡ CYBER LYRIC ULTRA ⚡
-PREMIUM ENGINE V4.5 // ANTI-LAG GPU
+        body {
+            /* Tông màu nền: Trắng tinh khiết pha chút xám lạnh */
+            background-color: #f0f4f8;
+            color: #1a202c;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 20px;
+            position: relative;
+        }
 
-KÍCH HOẠT
-Hệ thống đang ở trạng thái chờ...
+        /* Nền hiệu ứng hạt (Particles) màu xanh nhạt thay vì Matrix */
+        #particleCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Khung App: Glassmorphism phiên bản sáng (Light Glass) */
+        .app-container {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            max-width: 650px;
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 24px;
+            padding: 40px 30px;
+            box-shadow: 0 20px 40px rgba(14, 165, 233, 0.1), 0 1px 3px rgba(0,0,0,0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            min-height: 450px;
+        }
+
+        /* Badge YSL góc trên */
+        .founder-badge {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+            color: white;
+            padding: 6px 14px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            border-radius: 20px;
+            box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3);
+            z-index: 3;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        h1 {
+            color: #0f172a;
+            text-align: center;
+            font-size: 2.2rem;
+            font-weight: 900;
+            letter-spacing: -1px;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #0ea5e9;
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 35px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background: #ffffff;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            color: #334155;
+            padding: 16px 20px;
+            font-family: 'Inter', sans-serif;
+            font-size: 1.05rem;
+            outline: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            border-color: #0ea5e9;
+            box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.15);
+        }
+
+        input[type="text"]::placeholder {
+            color: #94a3b8;
+            font-weight: 300;
+        }
+
+        button.btn-primary {
+            background: linear-gradient(135deg, #0284c7, #0ea5e9);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            padding: 0 28px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+        }
+
+        button.btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(14, 165, 233, 0.4);
+        }
+
+        button.btn-primary:active {
+            transform: translateY(0);
+        }
+
+        /* Khung tải file nhạc cục bộ */
+        .local-audio-wrapper {
+            margin: 10px 0 20px 0;
+            padding: 16px;
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.5);
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .local-audio-wrapper:hover {
+            border-color: #0ea5e9;
+            background: rgba(14, 165, 233, 0.05);
+        }
+
+        .local-audio-wrapper label {
+            color: #64748b;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: block;
+        }
+
+        .local-audio-wrapper input[type="file"] {
+            display: none;
+        }
+
+        /* Lịch sử tìm kiếm */
+        .history-box {
+            margin-top: 10px;
+        }
+        
+        .history-title {
+            color: #94a3b8;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .history-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .history-tag {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        
+        .history-tag:hover {
+            background: #f0f9ff;
+            border-color: #bae6fd;
+            color: #0284c7;
+            transform: translateY(-1px);
+        }
+
+        .status-log {
+            margin-top: auto;
+            padding-top: 20px;
+            color: #64748b;
+            font-size: 0.9rem;
+            text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Footer YSL Info */
+        .footer-info {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        .footer-info span {
+            color: #0ea5e9;
+            font-weight: 700;
+        }
+
+        /* ================= MÀN HÌNH PLAYER ================= */
+        #stage {
+            display: none;
+            width: 100%;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 25px;
+            left: 25px;
+            color: #64748b;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            z-index: 10;
+            transition: all 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .back-btn:hover {
+            color: #0ea5e9;
+            border-color: #0ea5e9;
+            background: #f0f9ff;
+        }
+
+        .song-banner {
+            text-align: center;
+            margin-top: 20px;
+            margin-bottom: 30px;
+        }
+
+        .song-title {
+            font-size: 1.8rem;
+            color: #0f172a;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+
+        .song-artist {
+            color: #0ea5e9;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        /* Viewport Lyrics */
+        .lyric-viewport {
+            height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin: 10px 0;
+            position: relative;
+            mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+            -webkit-mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+        }
+
+        .lyric-row {
+            text-align: center;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 100%;
+            padding: 8px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lyric-row.prev, .lyric-row.next {
+            font-size: 1.1rem;
+            opacity: 0.4;
+            color: #64748b;
+            transform: scale(0.95);
+            font-weight: 500;
+        }
+
+        .lyric-row.current {
+            font-size: 1.6rem;
+            font-weight: 800;
+            transform: scale(1.05);
+            padding: 15px 0;
+            /* Đổi màu chữ hiện tại sang gradient Xanh Dương */
+            background: linear-gradient(90deg, #0284c7, #38bdf8, #0ea5e9);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shine 4s linear infinite;
+        }
+
+        @keyframes shine {
+            to { background-position: 200% center; }
+        }
+
+        .time-badge {
+            color: #94a3b8;
+            font-size: 0.8rem;
+            display: block;
+            text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+            margin-bottom: -10px;
+        }
+
+        /* BỘ ĐIỀU KHIỂN ÂM THANH */
+        .audio-player-panel {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: auto;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.03);
+        }
+
+        .player-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .play-btn {
+            background: linear-gradient(135deg, #0284c7, #0ea5e9);
+            border: none;
+            color: white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 6px 12px rgba(14, 165, 233, 0.3);
+            transition: all 0.2s;
+        }
+
+        .play-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 16px rgba(14, 165, 233, 0.4);
+        }
+
+        .progress-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .progress-bar-wrapper {
+            flex: 1;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #0ea5e9, #38bdf8);
+            border-radius: 4px;
+            position: relative;
+            transition: width 0.1s linear;
+        }
+
+        /* DÀN SÓNG NHẠC VISUALIZER */
+        .visualizer-container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 4px;
+            height: 40px;
+            margin-top: 15px;
+        }
+
+        .bar {
+            width: 6px;
+            height: 4px;
+            background: #0ea5e9;
+            border-radius: 3px 3px 0 0;
+            transition: height 0.08s ease;
+            opacity: 0.8;
+        }
+
+        /* Loader xịn sò */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 50%;
+            border-top-color: #0ea5e9;
+            animation: spin 0.8s linear infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Nền hạt chuyển động thay cho ma trận -->
+    <canvas id="particleCanvas"></canvas>
+    
+    <audio id="mainAudio" crossOrigin="anonymous"></audio>
+
+    <div class="app-container" id="appContainer">
+        <div class="founder-badge">YSL CORE</div>
+        
+        <!-- ================= MÀN HÌNH TÌM KIẾM ================= -->
+        <div id="searchScreen">
+            <h1>YSL AUDIO</h1>
+            <div class="subtitle">Cloud Sync Engine v7.0</div>
+            
+            <div class="input-wrapper">
+                <input type="text" id="songInput" placeholder="Nhập tên bài hát + Ca sĩ..." autocomplete="off">
+                <button class="btn-primary" onclick="handleSearch()">TÌM KIẾM</button>
+            </div>
+
+            <div class="local-audio-wrapper" onclick="document.getElementById('audioFileInput').click()">
+                <label id="fileLabel">📁 CHỌN FILE NHẠC TỪ THIẾT BỊ (.MP3)</label>
+                <input type="file" id="audioFileInput" accept="audio/*" onchange="handleFileSelect(event)">
+            </div>
+
+            <div class="history-box" id="historyBox" style="display: none;">
+                <div class="history-title">GẦN ĐÂY</div>
+                <div class="history-tags" id="historyTags"></div>
+            </div>
+            
+            <div class="status-log" id="statusLog">Hệ thống sẵn sàng...</div>
+
+            <div class="footer-info">
+                Designed & Developed by <span>YSL</span>
+            </div>
+        </div>
+
+        <!-- ================= MÀN HÌNH PLAYER ================= -->
+        <div id="stage">
+            <button class="back-btn" onclick="resetApp()">❮</button>
+            
+            <div class="song-banner">
+                <div class="song-title" id="songTitle">TÊN BÀI HÁT</div>
+                <div class="song-artist" id="songArtist">Ca sĩ biểu diễn</div>
+            </div>
+
+            <span class="time-badge" id="timeBadge">00:00</span>
+            
+            <div class="lyric-viewport">
+                <div class="lyric-row prev" id="lyricPrev"></div>
+                <div class="lyric-row current" id="lyricCurrent">Đang kết nối luồng âm thanh...</div>
+                <div class="lyric-row next" id="lyricNext"></div>
+            </div>
+
+            <div class="audio-player-panel">
+                <div class="player-controls">
+                    <button class="play-btn" id="playBtn" onclick="togglePlayback()">▶</button>
+                    <div class="progress-container">
+                        <span id="timeCurrent">00:00</span>
+                        <div class="progress-bar-wrapper" id="progressBar" onclick="seekAudio(event)">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <span id="timeTotal">00:00</span>
+                    </div>
+                </div>
+                <!-- Sóng nhạc thu gọn vào trong panel cho gọn gàng -->
+                <div class="visualizer-container" id="visualizer"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- 1. HIỆU ỨNG NỀN PARTICLE (Hạt mây xanh) ---
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 3 + 1;
+                this.speedY = Math.random() * 0.5 + 0.1;
+                this.opacity = Math.random() * 0.5 + 0.1;
+            }
+            update() {
+                this.y -= this.speedY;
+                if (this.y < 0) {
+                    this.y = canvas.height;
+                    this.x = Math.random() * canvas.width;
+                }
+            }
+            draw() {
+                ctx.fillStyle = `rgba(14, 165, 233, ${this.opacity})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            let numParticles = (canvas.width * canvas.height) / 15000;
+            for (let i = 0; i < numParticles; i++) {
+                particles.push(new Particle());
+            }
+        }
+        initParticles();
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
+        // --- 2. LỊCH SỬ TÌM KIẾM ---
+        const STORAGE_KEY = 'ysl_cloud_history';
+        function getHistory() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            return data ? JSON.parse(data) : [];
+        }
+        function saveToHistory(query) {
+            let history = getHistory();
+            history = history.filter(item => item.toLowerCase() !== query.toLowerCase());
+            history.unshift(query);
+            if(history.length > 6) history.pop();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+            renderHistory();
+        }
+        function renderHistory() {
+            const history = getHistory();
+            const box = document.getElementById('historyBox');
+            const container = document.getElementById('historyTags');
+            if(history.length === 0) { box.style.display = 'none'; return; }
+            box.style.display = 'block';
+            container.innerHTML = '';
+            history.forEach(item => {
+                const tag = document.createElement('span');
+                tag.className = 'history-tag';
+                tag.textContent = item;
+                tag.onclick = () => {
+                    document.getElementById('songInput').value = item;
+                    handleSearch();
+                };
+                container.appendChild(tag);
+            });
+        }
+        renderHistory();
+
+        // --- 3. ĐIỀU KHIỂN AUDIO VÀ LYRIC ---
+        const audio = document.getElementById('mainAudio');
+        let parsedLyrics = [];
+        let currentTrackInfo = { title: "Unknown", artist: "Local File" };
+        let localFileObject = null;
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            localFileObject = file;
+            document.getElementById('fileLabel').innerHTML = `<span style="color:#0ea5e9; font-weight:700">🎵 Đã nạp: ${file.name.substring(0, 25)}...</span>`;
+        }
+
+        async function handleSearch() {
+            const query = document.getElementById('songInput').value.trim();
+            const logEl = document.getElementById('statusLog');
+            if (!query) return;
+
+            logEl.innerHTML = `<div class="spinner"></div> Đang đồng bộ hóa dữ liệu từ đám mây...`;
+            
+            try {
+                const lyricRes = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(query)}`);
+                const lyricData = await lyricRes.json();
+                const track = lyricData.find(t => t.syncedLyrics);
+                
+                if (!track) {
+                    logEl.innerHTML = `<span style="color:#ef4444">Không tìm thấy lời bài hát khớp chuẩn thời gian.</span>`;
+                    return;
+                }
+
+                parsedLyrics = parseLRC(track.syncedLyrics);
+                currentTrackInfo.title = track.trackName;
+                currentTrackInfo.artist = track.artistName;
+
+                saveToHistory(query);
+
+                if(localFileObject) {
+                    const fileURL = URL.createObjectURL(localFileObject);
+                    audio.src = fileURL;
+                    logEl.innerHTML = `<span style="color:#10b981">Đồng bộ file cục bộ thành công! Kích hoạt Player...</span>`;
+                    setTimeout(() => startStage(), 800);
+                } else {
+                    const musicRes = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=1`);
+                    const musicData = await musicRes.json();
+                    
+                    if (musicData.results && musicData.results.length > 0 && musicData.results[0].previewUrl) {
+                        audio.src = musicData.results[0].previewUrl;
+                        logEl.innerHTML = `<span style="color:#10b981">Kết nối âm thanh đám mây thành công!</span>`;
+                        setTimeout(() => startStage(), 800);
+                    } else {
+                        logEl.innerHTML = `<span style="color:#f59e0b">Chỉ tìm thấy lời, thiếu nhạc. Vui lòng nạp MP3 thủ công!</span>`;
+                    }
+                }
+
+            } catch (error) {
+                logEl.innerHTML = `<span style="color:#ef4444">Lỗi kết nối máy chủ YSL.</span>`;
+            }
+        }
+
+        function parseLRC(lrcText) {
+            const lines = lrcText.split('\n');
+            const parsed = [];
+            const regex = /\[(\d{2}):(\d{2}\.\d{2,3})\](.*)/;
+            lines.forEach(line => {
+                const match = line.match(regex);
+                if (match) {
+                    const text = match[3].trim();
+                    if(text !== '') {
+                        const time = parseInt(match[1]) * 60 + parseFloat(match[2]);
+                        parsed.push({ time, text });
+                    }
+                }
+            });
+            return parsed.sort((a, b) => a.time - b.time);
+        }
+
+        // --- 4. PLAYER & SYNC ENGINE ---
+        function startStage() {
+            document.getElementById('searchScreen').style.display = 'none';
+            document.getElementById('stage').style.display = 'flex';
+            
+            document.getElementById('songTitle').textContent = currentTrackInfo.title;
+            document.getElementById('songArtist').textContent = currentTrackInfo.artist;
+
+            initVisualizer();
+            startVisualizerAnimation();
+
+            audio.play().then(() => {
+                document.getElementById('playBtn').innerHTML = "⏸";
+            }).catch(e => {
+                document.getElementById('playBtn').innerHTML = "▶";
+                console.log("Cần tương tác người dùng");
+            });
+
+            audio.addEventListener('timeupdate', syncLyricsWithAudio);
+            
+            audio.onended = () => {
+                document.getElementById('playBtn').innerHTML = "▶";
+                document.getElementById('lyricCurrent').innerHTML = "<span style='color:#0ea5e9'>✨ YSL TRACK HOÀN TẤT ✨</span>";
+                document.getElementById('lyricPrev').textContent = "";
+                document.getElementById('lyricNext').textContent = "";
+            };
+        }
+
+        function formatTime(secs) {
+            if (isNaN(secs)) return "00:00";
+            const m = Math.floor(secs / 60).toString().padStart(2, '0');
+            const s = Math.floor(secs % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        let lastActiveIndex = -1;
+        function syncLyricsWithAudio() {
+            const currentTime = audio.currentTime;
+            const duration = audio.duration || 0;
+
+            document.getElementById('timeCurrent').textContent = formatTime(currentTime);
+            document.getElementById('timeTotal').textContent = formatTime(duration);
+            if(duration > 0) {
+                const percent = (currentTime / duration) * 100;
+                document.getElementById('progressFill').style.width = `${percent}%`;
+            }
+
+            let activeIndex = -1;
+            for (let i = 0; i < parsedLyrics.length; i++) {
+                if (currentTime >= parsedLyrics[i].time) {
+                    activeIndex = i;
+                } else {
+                    break;
+                }
+            }
+
+            if (activeIndex !== lastActiveIndex) {
+                lastActiveIndex = activeIndex;
+
+                const prevEl = document.getElementById('lyricPrev');
+                const currEl = document.getElementById('lyricCurrent');
+                const nextEl = document.getElementById('lyricNext');
+                const timeBadge = document.getElementById('timeBadge');
+
+                if (activeIndex === -1) {
+                    timeBadge.textContent = "00:00";
+                    prevEl.textContent = "";
+                    currEl.textContent = "🎵 Chuẩn bị phát...";
+                    nextEl.textContent = parsedLyrics[0] ? parsedLyrics[0].text : "";
+                } else {
+                    const currentItem = parsedLyrics[activeIndex];
+                    timeBadge.textContent = formatTime(currentItem.time);
+                    
+                    prevEl.textContent = parsedLyrics[activeIndex - 1] ? parsedLyrics[activeIndex - 1].text : "";
+                    currEl.textContent = currentItem.text;
+                    nextEl.textContent = parsedLyrics[activeIndex + 1] ? parsedLyrics[activeIndex + 1].text : "";
+                }
+            }
+        }
+
+        function seekAudio(event) {
+            const bar = document.getElementById('progressBar');
+            const rect = bar.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const width = rect.width;
+            const percentage = clickX / width;
+            
+            if (audio.duration) {
+                audio.currentTime = percentage * audio.duration;
+                syncLyricsWithAudio(); 
+            }
+        }
+
+        function togglePlayback() {
+            const btn = document.getElementById('playBtn');
+            if (audio.paused) {
+                audio.play();
+                btn.innerHTML = "⏸";
+            } else {
+                audio.pause();
+                btn.innerHTML = "▶";
+            }
+        }
+        
+        function resetApp() {
+            audio.pause();
+            audio.currentTime = 0;
+            document.getElementById('stage').style.display = 'none';
+            document.getElementById('searchScreen').style.display = 'block';
+            document.getElementById('statusLog').innerHTML = "Hệ thống sẵn sàng...";
+            document.getElementById('playBtn').innerHTML = "▶";
+            lastActiveIndex = -1;
+        }
+
+        // --- 5. VISUALIZER (Tông Xanh Trời) ---
+        function initVisualizer() {
+            const container = document.getElementById('visualizer');
+            container.innerHTML = '';
+            for(let i = 0; i < 20; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                container.appendChild(bar);
+            }
+        }
+
+        function startVisualizerAnimation() {
+            const bars = document.querySelectorAll('.bar');
+            function animate() {
+                bars.forEach(bar => {
+                    let height = 4;
+                    if (!audio.paused) {
+                        height = Math.floor(Math.random() * 25) + 4;
+                    }
+                    bar.style.height = `${height}px`;
+                });
+                if(document.getElementById('stage').style.display === 'flex') {
+                    requestAnimationFrame(animate);
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+
+        document.getElementById('songInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') handleSearch();
+        });
+
+        // Đăng ký Service Worker cho PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .catch(err => console.log('SW Lỗi:', err));
+            });
+        }
+    </script>
+</body>
+</html>
