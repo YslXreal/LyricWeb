@@ -4,11 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
+    <!-- Ép Apple nhận diện thành App Fullscreen (Không cần manifest.json) -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="YSL Audio">
+    <!-- Icon hiển thị ngoài màn hình chính của iPhone -->
+    <link rel="apple-touch-icon" href="https://img.icons8.com/neon/512/cyberpunk-logo.png">
+    <!-- Icon nhỏ trên thanh tab -->
+    <link rel="icon" type="image/png" href="https://img.icons8.com/neon/512/cyberpunk-logo.png">
     
-    <title>YSL AUDIO // Standalone Master V14</title>
+    <title>YSL AUDIO // Singularity Master</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -159,7 +164,7 @@
         <!-- SEARCH STAGE -->
         <div id="searchScreen">
             <h1>YSL AUDIO</h1>
-            <div class="subtitle">STANDALONE MASTER V14</div>
+            <div class="subtitle">SINGULARITY MASTER V15</div>
 
             <div class="input-wrapper">
                 <input type="text" id="songInput" class="main-search" placeholder="Tên bài hát..." autocomplete="off">
@@ -181,7 +186,7 @@
                 <input type="file" id="audioFileInput" accept="audio/*" onchange="handleFileSelect(event)">
             </div>
             
-            <div class="status-log" id="statusLog">Hệ thống Độc Lập đã kích hoạt...</div>
+            <div class="status-log" id="statusLog">Cỗ Máy YSL Bất Tử đã kích hoạt...</div>
         </div>
 
         <!-- PLAYER STAGE -->
@@ -249,11 +254,11 @@
             const logEl = document.getElementById('statusLog');
             if (!query) return;
 
-            logEl.innerHTML = `<div class="spinner"></div> Đang kết nối mạng lưới YSL...`;
+            logEl.innerHTML = `<div class="spinner"></div> Đang gọi vệ tinh YSL...`;
             appContainer.style.transform = 'scale(0.98)'; setTimeout(() => appContainer.style.transform = 'scale(1)', 200);
 
             try {
-                // Gọi TRỰC TIẾP lên máy chủ Lyrics bằng HTTPS chuẩn, không qua Proxy hay VPS
+                // Gọi TRỰC TIẾP lên máy chủ Lyrics bằng HTTPS
                 const lyricUrl = `https://lrclib.net/api/search?q=${encodeURIComponent(query)}`;
                 const resLyric = await fetch(lyricUrl);
                 if (!resLyric.ok) throw new Error("Máy chủ Lyrics đang bận.");
@@ -271,7 +276,6 @@
                     setTimeout(() => startStage(), 500);
                 } else {
                     logEl.innerHTML = `<div class="spinner"></div> Đang tải âm thanh chất lượng cao...`;
-                    // Gọi TRỰC TIẾP iTunes
                     const itunesUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=1`;
                     const resMusic = await fetch(itunesUrl);
                     if (!resMusic.ok) throw new Error("Không thể tải nhạc.");
@@ -349,7 +353,7 @@
         }
 
         function togglePlayback() { if (audio.paused) audio.play(); else audio.pause(); }
-        function resetApp() { audio.pause(); audio.currentTime = 0; updatePlayState(false); document.getElementById('stage').style.display = 'none'; document.getElementById('searchScreen').style.display = 'block'; document.getElementById('statusLog').innerHTML = "Hệ thống Độc Lập đã kích hoạt..."; document.getElementById('songInput').value = ''; lastActiveIndex = -1; }
+        function resetApp() { audio.pause(); audio.currentTime = 0; updatePlayState(false); document.getElementById('stage').style.display = 'none'; document.getElementById('searchScreen').style.display = 'block'; document.getElementById('statusLog').innerHTML = "Cỗ Máy YSL Bất Tử đã kích hoạt..."; document.getElementById('songInput').value = ''; lastActiveIndex = -1; }
         document.getElementById('songInput').addEventListener('keypress', function(e) { if (e.key === 'Enter') handleSearch(); });
 
         // 5. VISUALIZER ENGINE
@@ -370,7 +374,7 @@
             requestAnimationFrame(animate);
         }
 
-        // PHÁ CACHE SERVICE WORKER CŨ NẾU CÓ ĐỂ LUÔN TẢI BẢN MỚI NHẤT
+        // TỰ ĐỘNG BỨT TỬ: Đập bỏ Service Worker Cũ NẾU CÓ để tránh lỗi Cache từ các bản trước.
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(function(registrations) {
                 for(let registration of registrations) { registration.unregister(); }
