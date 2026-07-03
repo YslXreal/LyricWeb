@@ -1,6 +1,6 @@
 {
-    "short_name": "CyberLyric",
-    "name": "Cyberpunk Lyric Player Ultra",
+    "short_name": "YSL Audio",
+    "name": "YSL Core Audio Engine",
     "icons": [
         {
             "src": "https://img.icons8.com/neon/512/cyberpunk-logo.png",
@@ -10,8 +10,8 @@
         }
     ],
     "start_url": "./index.html",
-    "background_color": "#050508",
-    "theme_color": "#050508",
+    "background_color": "#f8fafc",
+    "theme_color": "#0ea5e9",
     "display": "standalone",
     "orientation": "portrait"
 }
