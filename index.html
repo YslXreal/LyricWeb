@@ -8,8 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="YSL Audio">
     
-    <link rel="manifest" href="manifest.json">
-    <title>YSL AUDIO // Ultimate Master</title>
+    <title>YSL AUDIO // Standalone Master V14</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,10 +16,10 @@
     
     <style>
         :root {
-            --bg-color: #f8fafc;
-            --glass-bg: rgba(255, 255, 255, 0.85);
-            --glass-border: rgba(255, 255, 255, 0.6);
-            --primary-blue: #0ea5e9;
+            --bg-color: #f1f5f9;
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.8);
+            --primary-blue: #0284c7;
             --primary-gradient: linear-gradient(135deg, #0284c7, #38bdf8);
             --text-main: #0f172a;
             --text-sub: #64748b;
@@ -36,115 +35,115 @@
 
         .ambient-glow {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 80vw; height: 80vw; max-width: 800px; max-height: 800px;
+            width: 90vw; height: 90vw; max-width: 800px; max-height: 800px;
             background: radial-gradient(circle, rgba(14, 165, 233, 0.15) 0%, rgba(255,255,255,0) 70%);
             z-index: 0; transition: all 0.3s ease;
         }
-        .ambient-glow.playing { animation: pulse 2s infinite alternate ease-in-out; }
-        @keyframes pulse { 0% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; } 100% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; } }
+        .ambient-glow.playing { animation: pulse 2.5s infinite alternate ease-in-out; }
+        @keyframes pulse { 0% { transform: translate(-50%, -50%) scale(1); opacity: 0.7; } 100% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; } }
 
         #particleCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
 
         .app-container {
             position: relative; z-index: 2; width: 92%; max-width: 550px;
             background: var(--glass-bg); border: 1px solid var(--glass-border);
-            border-radius: 30px; padding: 35px 25px;
-            box-shadow: 0 25px 50px rgba(14, 165, 233, 0.08), inset 0 2px 5px rgba(255,255,255,0.8);
-            backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
-            display: flex; flex-direction: column; min-height: 500px;
+            border-radius: 36px; padding: 35px 25px;
+            box-shadow: 0 30px 60px rgba(14, 165, 233, 0.1), inset 0 2px 10px rgba(255,255,255,0.9);
+            backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+            display: flex; flex-direction: column; min-height: 550px;
             transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
         .founder-badge {
             position: absolute; top: -15px; right: 30px; background: var(--primary-gradient);
-            color: white; padding: 8px 18px; font-size: 0.75rem; font-weight: 800; letter-spacing: 2px;
+            color: white; padding: 8px 20px; font-size: 0.75rem; font-weight: 800; letter-spacing: 2px;
             border-radius: 20px; box-shadow: 0 8px 20px rgba(14, 165, 233, 0.4);
             font-family: 'JetBrains Mono', monospace; z-index: 3;
         }
 
-        h1 { font-size: 2.4rem; font-weight: 900; letter-spacing: -1.5px; margin-bottom: 5px; text-align: center; }
-        .subtitle { color: var(--primary-blue); text-align: center; font-size: 0.8rem; font-weight: 600; margin-bottom: 20px; letter-spacing: 3px; font-family: 'JetBrains Mono', monospace; }
+        h1 { font-size: 2.6rem; font-weight: 900; letter-spacing: -1.5px; margin-bottom: 5px; text-align: center; color: #0284c7; }
+        .subtitle { color: #38bdf8; text-align: center; font-size: 0.85rem; font-weight: 700; margin-bottom: 30px; letter-spacing: 3px; font-family: 'JetBrains Mono', monospace; }
 
-        .vps-box {
-            background: rgba(14, 165, 233, 0.05); border: 1px dashed var(--primary-blue); border-radius: 16px;
-            padding: 10px 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;
-        }
-        .vps-box span { font-size: 0.75rem; font-weight: 800; color: var(--primary-blue); white-space: nowrap; }
-        .vps-box input {
-            flex: 1; background: transparent; border: none; border-bottom: 1px solid #cbd5e1; padding: 5px;
-            font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--text-main); outline: none;
-        }
-        .vps-box input:focus { border-bottom-color: var(--primary-blue); }
-
-        .input-wrapper { display: flex; gap: 10px; margin-bottom: 20px; position: relative; }
+        .input-wrapper { display: flex; gap: 12px; margin-bottom: 25px; position: relative; }
         input[type="text"].main-search {
-            flex: 1; background: rgba(255,255,255,0.9); border: 2px solid #e2e8f0; border-radius: 16px;
-            color: var(--text-main); padding: 18px 20px; font-size: 1.05rem; outline: none; transition: all 0.3s;
+            flex: 1; background: rgba(255,255,255,0.9); border: 2px solid #e2e8f0; border-radius: 20px;
+            color: var(--text-main); padding: 18px 22px; font-size: 1.1rem; outline: none; transition: all 0.3s; font-weight: 500;
         }
-        input[type="text"].main-search:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1); }
+        input[type="text"].main-search:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.15); }
         
         button.btn-primary {
-            background: var(--primary-gradient); border: none; border-radius: 16px; color: white;
-            padding: 0 25px; font-weight: 800; cursor: pointer; box-shadow: 0 6px 15px rgba(14, 165, 233, 0.3);
+            background: var(--primary-gradient); border: none; border-radius: 20px; color: white;
+            padding: 0 28px; font-weight: 800; font-size: 1.1rem; cursor: pointer; box-shadow: 0 6px 15px rgba(14, 165, 233, 0.3);
             transition: all 0.2s;
         }
-        button.btn-primary:active { transform: scale(0.95); }
+        button.btn-primary:active { transform: scale(0.92); }
 
-        .suggestions { margin-bottom: 20px; }
-        .suggestions-title { font-size: 0.75rem; color: var(--text-sub); font-weight: 600; margin-bottom: 10px; letter-spacing: 1px; }
-        .suggestion-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+        .suggestions { margin-bottom: 25px; }
+        .suggestions-title { font-size: 0.75rem; color: var(--text-sub); font-weight: 700; margin-bottom: 12px; letter-spacing: 1.5px; }
+        .suggestion-tags { display: flex; flex-wrap: wrap; gap: 10px; }
         .suggest-tag {
-            background: rgba(14, 165, 233, 0.05); border: 1px solid rgba(14, 165, 233, 0.2);
-            color: var(--primary-blue); padding: 8px 16px; border-radius: 20px; font-size: 0.85rem;
-            font-weight: 600; cursor: pointer; transition: all 0.2s;
+            background: white; border: 1px solid #e2e8f0; color: var(--text-sub);
+            padding: 10px 18px; border-radius: 24px; font-size: 0.85rem;
+            font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.02);
         }
-        .suggest-tag:active { background: var(--primary-blue); color: white; }
+        .suggest-tag:active { background: var(--primary-blue); color: white; border-color: var(--primary-blue); }
+
+        .local-audio-wrapper {
+            padding: 18px; border: 2px dashed #cbd5e1; border-radius: 20px; background: rgba(255, 255, 255, 0.5);
+            text-align: center; transition: all 0.3s; cursor: pointer; margin-bottom: 20px;
+        }
+        .local-audio-wrapper label { color: var(--primary-blue); font-size: 0.95rem; font-weight: 700; cursor: pointer; }
+        .local-audio-wrapper input[type="file"] { display: none; }
         
-        .status-log { margin-top: auto; padding-top: 15px; color: var(--text-sub); font-size: 0.85rem; text-align: center; font-family: 'JetBrains Mono', monospace; }
+        .status-log { margin-top: auto; padding-top: 15px; color: var(--text-sub); font-size: 0.85rem; text-align: center; font-family: 'JetBrains Mono', monospace; font-weight: 500; }
 
         /* ================= PLAYER STAGE ================= */
         #stage { display: none; width: 100%; flex-direction: column; flex: 1; position: relative; }
         
-        .swipe-hint { position: absolute; top: 0; left: 50%; transform: translateX(-50%); font-size: 0.7rem; color: #94a3b8; opacity: 0.6; pointer-events: none; letter-spacing: 1px; }
+        .swipe-hint { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); font-size: 0.75rem; color: #94a3b8; font-weight: 600; opacity: 0.6; pointer-events: none; letter-spacing: 1px; }
 
-        .song-banner { text-align: center; margin-top: 30px; margin-bottom: 20px; }
-        .song-title { font-size: 1.8rem; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 5px; line-height: 1.2; }
-        .song-artist { color: var(--primary-blue); font-size: 1rem; font-weight: 600; }
+        .song-banner { text-align: center; margin-top: 25px; margin-bottom: 15px; }
+        .song-title { font-size: 2rem; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 5px; line-height: 1.2; color: var(--text-main); }
+        .song-artist { color: var(--primary-blue); font-size: 1.1rem; font-weight: 700; }
 
         .lyric-viewport {
-            height: 220px; display: flex; flex-direction: column; justify-content: center; align-items: center;
-            margin: 10px 0; position: relative; mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent); -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+            height: 250px; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            margin: 15px 0; position: relative; mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent); -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
         }
-        .lyric-row { text-align: center; transition: all 0.4s ease-out; width: 100%; padding: 8px 10px; display: flex; align-items: center; justify-content: center; line-height: 1.4; }
-        .lyric-row.prev, .lyric-row.next { font-size: 1.05rem; opacity: 0.3; color: var(--text-sub); transform: scale(0.9); font-weight: 500; }
+        .lyric-row { text-align: center; transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); width: 100%; padding: 10px; display: flex; align-items: center; justify-content: center; line-height: 1.5; }
+        .lyric-row.prev, .lyric-row.next { font-size: 1.15rem; opacity: 0.3; color: var(--text-sub); transform: scale(0.9); font-weight: 600; }
         
         .lyric-row.current {
-            font-size: 1.5rem; font-weight: 800; transform: scale(1.05); padding: 15px 0;
-            color: rgba(14, 165, 233, 0.2); position: relative;
+            font-size: 1.8rem; font-weight: 900; transform: scale(1.08); padding: 15px 0;
+            color: rgba(14, 165, 233, 0.15); position: relative;
         }
+        /* Hiệu ứng Karaoke chuẩn xịn */
         .lyric-row.current::after {
             content: attr(data-text); position: absolute; left: 0; top: 15px; width: var(--fill-percent, 0%);
             height: 100%; color: var(--primary-blue); overflow: hidden; white-space: nowrap;
-            display: flex; justify-content: center; transition: width 0.1s linear;
+            display: flex; justify-content: center; transition: width 0.05s linear;
         }
 
-        .time-badge { color: #94a3b8; font-size: 0.8rem; text-align: center; font-family: 'JetBrains Mono', monospace; }
+        .time-badge { color: #94a3b8; font-size: 0.85rem; text-align: center; font-family: 'JetBrains Mono', monospace; font-weight: 600; margin-bottom: 10px; }
 
-        .audio-player-panel { background: white; border: 1px solid #e2e8f0; border-radius: 20px; padding: 25px 20px; margin-top: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.04); }
-        .player-controls { display: flex; align-items: center; gap: 15px; }
+        .audio-player-panel { background: rgba(255,255,255,0.9); border: 1px solid #e2e8f0; border-radius: 24px; padding: 25px; margin-top: auto; box-shadow: 0 15px 35px rgba(0,0,0,0.05); }
+        .player-controls { display: flex; align-items: center; gap: 18px; }
         .play-btn {
-            background: var(--primary-gradient); border: none; color: white; border-radius: 50%; width: 55px; height: 55px;
-            display: flex; align-items: center; justify-content: center; font-size: 1.4rem; cursor: pointer;
-            box-shadow: 0 8px 20px rgba(14, 165, 233, 0.35); transition: all 0.2s;
+            background: var(--primary-gradient); border: none; color: white; border-radius: 50%; width: 60px; height: 60px;
+            display: flex; align-items: center; justify-content: center; font-size: 1.6rem; cursor: pointer;
+            box-shadow: 0 10px 25px rgba(14, 165, 233, 0.4); transition: all 0.2s; flex-shrink: 0;
         }
         .play-btn:active { transform: scale(0.9); }
         
-        .progress-container { flex: 1; display: flex; flex-direction: column; gap: 8px; }
-        .progress-bar-wrapper { width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; cursor: pointer; position: relative; overflow: hidden; }
-        .progress-fill { height: 100%; width: 0%; background: var(--primary-gradient); border-radius: 4px; transition: width 0.1s linear; }
-        .time-info { display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #94a3b8; }
+        .progress-container { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+        .progress-bar-wrapper { width: 100%; height: 10px; background: #e2e8f0; border-radius: 5px; cursor: pointer; position: relative; overflow: hidden; }
+        .progress-fill { height: 100%; width: 0%; background: var(--primary-gradient); border-radius: 5px; transition: width 0.1s linear; }
+        .time-info { display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--text-sub); font-weight: 600; }
 
-        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #e2e8f0; border-radius: 50%; border-top-color: var(--primary-blue); animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 8px; }
+        .visualizer-container { display: flex; justify-content: center; align-items: flex-end; gap: 5px; height: 35px; margin-top: 15px; }
+        .bar { width: 6px; height: 4px; background: var(--primary-blue); border-radius: 3px 3px 0 0; transition: height 0.08s ease; opacity: 0.8; }
+
+        .spinner { display: inline-block; width: 18px; height: 18px; border: 3px solid #e2e8f0; border-radius: 50%; border-top-color: var(--primary-blue); animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 8px; }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
@@ -160,29 +159,29 @@
         <!-- SEARCH STAGE -->
         <div id="searchScreen">
             <h1>YSL AUDIO</h1>
-            <div class="subtitle">Ultimate Master</div>
-            
-            <div class="vps-box">
-                <span>📡 IP VPS:</span>
-                <input type="text" id="vpsIp" value="http://180.93.137.116:5000" placeholder="http://IP_VPS:5000">
-            </div>
+            <div class="subtitle">STANDALONE MASTER V14</div>
 
             <div class="input-wrapper">
-                <input type="text" id="songInput" class="main-search" placeholder="Tên bài hát + Ca sĩ..." autocomplete="off">
+                <input type="text" id="songInput" class="main-search" placeholder="Tên bài hát..." autocomplete="off">
                 <button class="btn-primary" onclick="handleSearch()">GO</button>
             </div>
 
             <div class="suggestions">
-                <div class="suggestions-title">🔥 BẢNG XẾP HẠNG</div>
+                <div class="suggestions-title">🔥 THỊNH HÀNH</div>
                 <div class="suggestion-tags">
                     <span class="suggest-tag" onclick="quickSearch('Đừng Làm Trái Tim Anh Đau')">Trái Tim Anh Đau</span>
                     <span class="suggest-tag" onclick="quickSearch('Ngủ Một Mình')">Ngủ Một Mình</span>
                     <span class="suggest-tag" onclick="quickSearch('Ngày Rời Chuyến Bay')">Ngày Rời Chuyến Bay</span>
-                    <span class="suggest-tag" onclick="quickSearch('Chìm Sâu MCK')">Chìm Sâu</span>
+                    <span class="suggest-tag" onclick="quickSearch('Muộn Rồi Mà Sao Còn')">Muộn Rồi Mà Sao Còn</span>
                 </div>
             </div>
+
+            <div class="local-audio-wrapper" onclick="document.getElementById('audioFileInput').click()">
+                <label id="fileLabel">🎵 NẠP FILE MP3 TỪ MÁY (TÙY CHỌN)</label>
+                <input type="file" id="audioFileInput" accept="audio/*" onchange="handleFileSelect(event)">
+            </div>
             
-            <div class="status-log" id="statusLog">Hệ thống sẵn sàng...</div>
+            <div class="status-log" id="statusLog">Hệ thống Độc Lập đã kích hoạt...</div>
         </div>
 
         <!-- PLAYER STAGE -->
@@ -198,7 +197,7 @@
             
             <div class="lyric-viewport">
                 <div class="lyric-row prev" id="lyricPrev"></div>
-                <div class="lyric-row current" id="lyricCurrent" data-text="Đang nạp luồng âm thanh...">Đang nạp luồng âm thanh...</div>
+                <div class="lyric-row current" id="lyricCurrent" data-text="Đang nạp dữ liệu...">Đang nạp dữ liệu...</div>
                 <div class="lyric-row next" id="lyricNext"></div>
             </div>
 
@@ -215,12 +214,13 @@
                         </div>
                     </div>
                 </div>
+                <div class="visualizer-container" id="visualizer"></div>
             </div>
         </div>
     </div>
 
     <script>
-        // 1. PARTICLES
+        // 1. PARTICLES (Hạt xanh lơ lửng)
         const canvas = document.getElementById('particleCanvas'); const ctx = canvas.getContext('2d'); let particles = [];
         function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; } window.addEventListener('resize', resizeCanvas); resizeCanvas();
         class Particle { constructor() { this.x = Math.random() * canvas.width; this.y = Math.random() * canvas.height; this.size = Math.random() * 2.5 + 0.5; this.speedY = Math.random() * 0.3 + 0.05; this.opacity = Math.random() * 0.3 + 0.1; } update() { this.y -= this.speedY; if (this.y < 0) { this.y = canvas.height; this.x = Math.random() * canvas.width; } } draw() { ctx.fillStyle = `rgba(14, 165, 233, ${this.opacity})`; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); } }
@@ -233,61 +233,56 @@
         function handleTouchMove(e) { touchEndX = e.changedTouches[0].screenX; let diff = touchEndX - touchStartX; if(diff > 0 && diff < 150) appContainer.style.transform = `translateX(${diff/3}px)`; }
         function handleTouchEnd() { appContainer.style.transform = `translateX(0px)`; if (touchEndX - touchStartX > 100) resetApp(); }
 
-        // 3. VPS & PROXY LOGIC (FIX MIXED CONTENT TUYỆT ĐỐI)
-        const VPS_IP_KEY = 'ysl_vps_ip_master';
-        const savedVpsIp = localStorage.getItem(VPS_IP_KEY);
-        if(savedVpsIp) document.getElementById('vpsIp').value = savedVpsIp;
-
+        // 3. CORE LOGIC FETCH TRỰC TIẾP (BỎ CẦN VPS)
         function quickSearch(song) { document.getElementById('songInput').value = song; handleSearch(); }
 
         const audio = document.getElementById('mainAudio');
-        let parsedLyrics = []; let currentTrackInfo = { title: "Unknown", artist: "" };
+        let parsedLyrics = []; let currentTrackInfo = { title: "Unknown", artist: "" }; let localFileObject = null;
 
-        async function fetchViaProxy(url) {
-            // Tà đạo: Bọc link HTTP của VPS vào AllOrigins HTTPS
-            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-            const response = await fetch(proxyUrl);
-            if (!response.ok) throw new Error("Proxy từ chối kết nối.");
-            const data = await response.json();
-            return JSON.parse(data.contents);
+        function handleFileSelect(event) {
+            const file = event.target.files[0]; if (!file) return; localFileObject = file;
+            document.getElementById('fileLabel').innerHTML = `✅ Đã nạp: ${file.name.substring(0, 20)}...`;
         }
 
         async function handleSearch() {
             const query = document.getElementById('songInput').value.trim();
-            let vpsUrl = document.getElementById('vpsIp').value.trim();
             const logEl = document.getElementById('statusLog');
-            
             if (!query) return;
-            if (!vpsUrl) { logEl.innerHTML = `<span style="color:#ef4444">Chưa nhập IP VPS!</span>`; return; }
 
-            if(vpsUrl.endsWith('/')) vpsUrl = vpsUrl.slice(0, -1);
-            localStorage.setItem(VPS_IP_KEY, vpsUrl);
-
-            logEl.innerHTML = `<div class="spinner"></div> Đang kích hoạt đường hầm bảo mật...`;
+            logEl.innerHTML = `<div class="spinner"></div> Đang kết nối mạng lưới YSL...`;
             appContainer.style.transform = 'scale(0.98)'; setTimeout(() => appContainer.style.transform = 'scale(1)', 200);
 
             try {
-                const apiPath = `${vpsUrl}/api/search?q=${encodeURIComponent(query)}`;
+                // Gọi TRỰC TIẾP lên máy chủ Lyrics bằng HTTPS chuẩn, không qua Proxy hay VPS
+                const lyricUrl = `https://lrclib.net/api/search?q=${encodeURIComponent(query)}`;
+                const resLyric = await fetch(lyricUrl);
+                if (!resLyric.ok) throw new Error("Máy chủ Lyrics đang bận.");
+                const lyricData = await resLyric.json();
                 
-                // Buộc dùng đường hầm HTTPS để qua mặt Safari iOS
-                let data = await fetchViaProxy(apiPath);
-                
-                if (data.error) { logEl.innerHTML = `<span style="color:#f59e0b">${data.error}</span>`; return; }
-                
-                parsedLyrics = parseLRC(data.lyrics);
-                currentTrackInfo.title = data.title; currentTrackInfo.artist = data.artist;
+                let track = Array.isArray(lyricData) ? lyricData.find(t => t.syncedLyrics) : null;
+                if (!track) { logEl.innerHTML = `<span style="color:#ef4444">Chưa có lời khớp nhịp cho bài này trên hệ thống.</span>`; return; }
 
-                if(data.audio_url) {
-                    audio.src = data.audio_url;
+                parsedLyrics = parseLRC(track.syncedLyrics);
+                currentTrackInfo.title = track.trackName; currentTrackInfo.artist = track.artistName;
+
+                if(localFileObject) {
+                    audio.src = URL.createObjectURL(localFileObject);
+                    logEl.innerHTML = `<span style="color:#0ea5e9">Mọi thứ đã sẵn sàng! Lên nhạc...</span>`;
                     setTimeout(() => startStage(), 500);
                 } else {
-                    logEl.innerHTML = `<span style="color:#f59e0b">Chỉ tìm thấy lời, bài này trên hệ thống chưa có nhạc nền!</span>`;
-                }
+                    logEl.innerHTML = `<div class="spinner"></div> Đang tải âm thanh chất lượng cao...`;
+                    // Gọi TRỰC TIẾP iTunes
+                    const itunesUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=1`;
+                    const resMusic = await fetch(itunesUrl);
+                    if (!resMusic.ok) throw new Error("Không thể tải nhạc.");
+                    const musicData = await resMusic.json();
 
-            } catch (error) {
-                console.error(error);
-                logEl.innerHTML = `<span style="color:#ef4444">Kết nối thất bại. Hãy chắc chắn app.py trên VPS vẫn đang chạy.</span>`;
-            }
+                    if (musicData && musicData.results && musicData.results.length > 0 && musicData.results[0].previewUrl) {
+                        audio.src = musicData.results[0].previewUrl;
+                        setTimeout(() => startStage(), 500);
+                    } else { logEl.innerHTML = `<span style="color:#f59e0b">Chỉ có lời, không tìm thấy nhạc gốc. Nạp File MP3 của bạn để chạy!</span>`; }
+                }
+            } catch (error) { logEl.innerHTML = `<span style="color:#ef4444">${error.message}</span>`; }
         }
 
         function parseLRC(lrcText) {
@@ -300,6 +295,7 @@
         function startStage() {
             document.getElementById('searchScreen').style.display = 'none'; document.getElementById('stage').style.display = 'flex';
             document.getElementById('songTitle').textContent = currentTrackInfo.title; document.getElementById('songArtist').textContent = currentTrackInfo.artist;
+            initVisualizer(); startVisualizerAnimation();
             audio.play().then(() => updatePlayState(true)).catch(e => updatePlayState(false));
             audio.addEventListener('timeupdate', syncLyricsWithAudio);
             audio.addEventListener('play', () => updatePlayState(true)); audio.addEventListener('pause', () => updatePlayState(false));
@@ -353,15 +349,32 @@
         }
 
         function togglePlayback() { if (audio.paused) audio.play(); else audio.pause(); }
-        function resetApp() { audio.pause(); audio.currentTime = 0; updatePlayState(false); document.getElementById('stage').style.display = 'none'; document.getElementById('searchScreen').style.display = 'block'; document.getElementById('statusLog').innerHTML = "Hệ thống sẵn sàng..."; lastActiveIndex = -1; }
+        function resetApp() { audio.pause(); audio.currentTime = 0; updatePlayState(false); document.getElementById('stage').style.display = 'none'; document.getElementById('searchScreen').style.display = 'block'; document.getElementById('statusLog').innerHTML = "Hệ thống Độc Lập đã kích hoạt..."; document.getElementById('songInput').value = ''; lastActiveIndex = -1; }
         document.getElementById('songInput').addEventListener('keypress', function(e) { if (e.key === 'Enter') handleSearch(); });
-        
-        // ĐĂNG KÝ SERVICE WORKER - TỰ ĐỘNG XÓA CACHE CŨ
+
+        // 5. VISUALIZER ENGINE
+        function initVisualizer() {
+            const container = document.getElementById('visualizer'); container.innerHTML = '';
+            for(let i = 0; i < 24; i++) { const bar = document.createElement('div'); bar.className = 'bar'; container.appendChild(bar); }
+        }
+
+        function startVisualizerAnimation() {
+            const bars = document.querySelectorAll('.bar');
+            function animate() {
+                bars.forEach(bar => {
+                    let height = 4; if (!audio.paused) height = Math.floor(Math.random() * 25) + 4;
+                    bar.style.height = `${height}px`;
+                });
+                if(document.getElementById('stage').style.display === 'flex') requestAnimationFrame(animate);
+            }
+            requestAnimationFrame(animate);
+        }
+
+        // PHÁ CACHE SERVICE WORKER CŨ NẾU CÓ ĐỂ LUÔN TẢI BẢN MỚI NHẤT
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => { 
-                // Cập nhật lại đường dẫn với tham số v= để tránh cache file sw.js
-                navigator.serviceWorker.register('./sw.js?v=13').catch(()=>{}); 
-            }); 
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) { registration.unregister(); }
+            });
         }
     </script>
 </body>
