@@ -8,8 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="YSL Audio">
     
-    <link rel="manifest" href="manifest.json">
-    <title>YSL AUDIO // The Core V11</title>
+    <title>YSL AUDIO // Anti-CORS V12</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -65,7 +64,6 @@
         h1 { font-size: 2.4rem; font-weight: 900; letter-spacing: -1.5px; margin-bottom: 5px; text-align: center; }
         .subtitle { color: var(--primary-blue); text-align: center; font-size: 0.8rem; font-weight: 600; margin-bottom: 20px; letter-spacing: 3px; font-family: 'JetBrains Mono', monospace; }
 
-        /* Box cấu hình VPS */
         .vps-box {
             background: rgba(14, 165, 233, 0.05); border: 1px dashed var(--primary-blue); border-radius: 16px;
             padding: 10px 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;
@@ -100,13 +98,6 @@
             font-weight: 600; cursor: pointer; transition: all 0.2s;
         }
         .suggest-tag:active { background: var(--primary-blue); color: white; }
-
-        .local-audio-wrapper {
-            padding: 16px; border: 2px dashed #cbd5e1; border-radius: 16px; background: rgba(255, 255, 255, 0.4);
-            text-align: center; transition: all 0.3s; cursor: pointer; margin-bottom: 15px;
-        }
-        .local-audio-wrapper label { color: var(--text-sub); font-size: 0.9rem; font-weight: 600; cursor: pointer; }
-        .local-audio-wrapper input[type="file"] { display: none; }
         
         .status-log { margin-top: auto; padding-top: 15px; color: var(--text-sub); font-size: 0.85rem; text-align: center; font-family: 'JetBrains Mono', monospace; }
 
@@ -168,15 +159,15 @@
         <!-- SEARCH STAGE -->
         <div id="searchScreen">
             <h1>YSL AUDIO</h1>
-            <div class="subtitle">VPS Core Powered</div>
+            <div class="subtitle">Anti-CORS V12</div>
             
             <div class="vps-box">
                 <span>📡 IP VPS:</span>
-                <input type="text" id="vpsIp" value="http://180.93.137.116:5000" placeholder="http://YOUR_VPS_IP:5000">
+                <input type="text" id="vpsIp" value="http://180.93.137.116:5000" placeholder="http://IP_VPS:5000">
             </div>
 
             <div class="input-wrapper">
-                <input type="text" id="songInput" class="main-search" placeholder="Tìm bài hát, nghệ sĩ..." autocomplete="off">
+                <input type="text" id="songInput" class="main-search" placeholder="Tên bài hát + Ca sĩ..." autocomplete="off">
                 <button class="btn-primary" onclick="handleSearch()">GO</button>
             </div>
 
@@ -188,13 +179,8 @@
                     <span class="suggest-tag" onclick="quickSearch('Ngày Rời Chuyến Bay')">Ngày Rời Chuyến Bay</span>
                 </div>
             </div>
-
-            <div class="local-audio-wrapper" onclick="document.getElementById('audioFileInput').click()">
-                <label id="fileLabel">🎵 NẠP FILE MP3 TỪ MÁY (NẾU CÓ)</label>
-                <input type="file" id="audioFileInput" accept="audio/*" onchange="handleFileSelect(event)">
-            </div>
             
-            <div class="status-log" id="statusLog">Hệ thống sẵn sàng...</div>
+            <div class="status-log" id="statusLog">Hệ thống sẵn sàng bẻ khóa bảo mật...</div>
         </div>
 
         <!-- PLAYER STAGE -->
@@ -245,19 +231,23 @@
         function handleTouchMove(e) { touchEndX = e.changedTouches[0].screenX; let diff = touchEndX - touchStartX; if(diff > 0 && diff < 150) appContainer.style.transform = `translateX(${diff/3}px)`; }
         function handleTouchEnd() { appContainer.style.transform = `translateX(0px)`; if (touchEndX - touchStartX > 100) resetApp(); }
 
-        // 3. VPS & SEARCH LOGIC
-        const VPS_IP_KEY = 'ysl_vps_ip_v11';
+        // 3. VPS & PROXY LOGIC (ĐÂY LÀ PHẦN FIX LỖI MIXED CONTENT)
+        const VPS_IP_KEY = 'ysl_vps_ip_v12';
         const savedVpsIp = localStorage.getItem(VPS_IP_KEY);
         if(savedVpsIp) document.getElementById('vpsIp').value = savedVpsIp;
 
         function quickSearch(song) { document.getElementById('songInput').value = song; handleSearch(); }
 
         const audio = document.getElementById('mainAudio');
-        let parsedLyrics = []; let currentTrackInfo = { title: "Unknown", artist: "" }; let localFileObject = null;
+        let parsedLyrics = []; let currentTrackInfo = { title: "Unknown", artist: "" };
 
-        function handleFileSelect(event) {
-            const file = event.target.files[0]; if (!file) return; localFileObject = file;
-            document.getElementById('fileLabel').innerHTML = `<span style="color:#0ea5e9; font-weight:700">✅ Đã nạp: ${file.name.substring(0, 20)}...</span>`;
+        async function fetchViaProxy(url) {
+            // Sử dụng AllOrigins để bọc link HTTP của VPS lại thành HTTPS
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+            const response = await fetch(proxyUrl);
+            if (!response.ok) throw new Error("Proxy từ chối kết nối.");
+            const data = await response.json();
+            return JSON.parse(data.contents); // Allorigins trả data về trong field 'contents'
         }
 
         async function handleSearch() {
@@ -271,37 +261,31 @@
             if(vpsUrl.endsWith('/')) vpsUrl = vpsUrl.slice(0, -1);
             localStorage.setItem(VPS_IP_KEY, vpsUrl);
 
-            logEl.innerHTML = `<div class="spinner"></div> Đang gọi VPS YSL Core...`;
+            logEl.innerHTML = `<div class="spinner"></div> Đang kích hoạt đường hầm bảo mật...`;
             appContainer.style.transform = 'scale(0.98)'; setTimeout(() => appContainer.style.transform = 'scale(1)', 200);
 
             try {
-                // Phi thẳng vào con VPS của mày
-                const response = await fetch(`${vpsUrl}/api/search?q=${encodeURIComponent(query)}`);
+                // Đường link API của VPS (HTTP)
+                const apiPath = `${vpsUrl}/api/search?q=${encodeURIComponent(query)}`;
                 
-                if (!response.ok) {
-                    if(response.status === 404) logEl.innerHTML = `<span style="color:#f59e0b">VPS: Không có dữ liệu bài này.</span>`;
-                    else logEl.innerHTML = `<span style="color:#ef4444">VPS lỗi Server (Code: ${response.status}).</span>`;
-                    return;
-                }
-
-                const data = await response.json();
+                // Ép buộc chạy qua Proxy HTTPS để qua mặt Safari
+                let data = await fetchViaProxy(apiPath);
+                
                 if (data.error) { logEl.innerHTML = `<span style="color:#f59e0b">${data.error}</span>`; return; }
                 
                 parsedLyrics = parseLRC(data.lyrics);
                 currentTrackInfo.title = data.title; currentTrackInfo.artist = data.artist;
 
-                if(localFileObject) {
-                    audio.src = URL.createObjectURL(localFileObject);
-                    setTimeout(() => startStage(), 500);
-                } else if(data.audio_url) {
+                if(data.audio_url) {
                     audio.src = data.audio_url;
                     setTimeout(() => startStage(), 500);
                 } else {
-                    logEl.innerHTML = `<span style="color:#f59e0b">Thiếu nhạc nền trên đám mây. Vui lòng nạp MP3 thủ công!</span>`;
+                    logEl.innerHTML = `<span style="color:#f59e0b">Chỉ tìm thấy lời, bài này trên hệ thống chưa có nhạc nền!</span>`;
                 }
 
             } catch (error) {
-                logEl.innerHTML = `<span style="color:#ef4444">Không thể kết nối VPS. (Có thể do lỗi mạng hoặc chặn port)</span>`;
+                console.error(error);
+                logEl.innerHTML = `<span style="color:#ef4444">Kết nối thất bại. Hãy chắc chắn app.py trên VPS vẫn đang chạy.</span>`;
             }
         }
 
@@ -368,7 +352,7 @@
         }
 
         function togglePlayback() { if (audio.paused) audio.play(); else audio.pause(); }
-        function resetApp() { audio.pause(); audio.currentTime = 0; updatePlayState(false); document.getElementById('stage').style.display = 'none'; document.getElementById('searchScreen').style.display = 'block'; document.getElementById('statusLog').innerHTML = "Hệ thống YSL AI sẵn sàng..."; lastActiveIndex = -1; }
+        function resetApp() { audio.pause(); audio.currentTime = 0; updatePlayState(false); document.getElementById('stage').style.display = 'none'; document.getElementById('searchScreen').style.display = 'block'; document.getElementById('statusLog').innerHTML = "Hệ thống sẵn sàng..."; lastActiveIndex = -1; }
         document.getElementById('songInput').addEventListener('keypress', function(e) { if (e.key === 'Enter') handleSearch(); });
     </script>
 </body>
