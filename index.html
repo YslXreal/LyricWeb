@@ -8,7 +8,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="YSL Audio">
     
-    <title>YSL AUDIO // Anti-CORS V12</title>
+    <link rel="manifest" href="manifest.json">
+    <title>YSL AUDIO // Ultimate Master</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -159,7 +160,7 @@
         <!-- SEARCH STAGE -->
         <div id="searchScreen">
             <h1>YSL AUDIO</h1>
-            <div class="subtitle">Anti-CORS V12</div>
+            <div class="subtitle">Ultimate Master</div>
             
             <div class="vps-box">
                 <span>📡 IP VPS:</span>
@@ -174,13 +175,14 @@
             <div class="suggestions">
                 <div class="suggestions-title">🔥 BẢNG XẾP HẠNG</div>
                 <div class="suggestion-tags">
-                    <span class="suggest-tag" onclick="quickSearch('Đừng Làm Trái Tim Anh Đau')">Đừng Làm Trái Tim Anh Đau</span>
+                    <span class="suggest-tag" onclick="quickSearch('Đừng Làm Trái Tim Anh Đau')">Trái Tim Anh Đau</span>
                     <span class="suggest-tag" onclick="quickSearch('Ngủ Một Mình')">Ngủ Một Mình</span>
                     <span class="suggest-tag" onclick="quickSearch('Ngày Rời Chuyến Bay')">Ngày Rời Chuyến Bay</span>
+                    <span class="suggest-tag" onclick="quickSearch('Chìm Sâu MCK')">Chìm Sâu</span>
                 </div>
             </div>
             
-            <div class="status-log" id="statusLog">Hệ thống sẵn sàng bẻ khóa bảo mật...</div>
+            <div class="status-log" id="statusLog">Hệ thống sẵn sàng...</div>
         </div>
 
         <!-- PLAYER STAGE -->
@@ -231,8 +233,8 @@
         function handleTouchMove(e) { touchEndX = e.changedTouches[0].screenX; let diff = touchEndX - touchStartX; if(diff > 0 && diff < 150) appContainer.style.transform = `translateX(${diff/3}px)`; }
         function handleTouchEnd() { appContainer.style.transform = `translateX(0px)`; if (touchEndX - touchStartX > 100) resetApp(); }
 
-        // 3. VPS & PROXY LOGIC (ĐÂY LÀ PHẦN FIX LỖI MIXED CONTENT)
-        const VPS_IP_KEY = 'ysl_vps_ip_v12';
+        // 3. VPS & PROXY LOGIC (FIX MIXED CONTENT TUYỆT ĐỐI)
+        const VPS_IP_KEY = 'ysl_vps_ip_master';
         const savedVpsIp = localStorage.getItem(VPS_IP_KEY);
         if(savedVpsIp) document.getElementById('vpsIp').value = savedVpsIp;
 
@@ -242,12 +244,12 @@
         let parsedLyrics = []; let currentTrackInfo = { title: "Unknown", artist: "" };
 
         async function fetchViaProxy(url) {
-            // Sử dụng AllOrigins để bọc link HTTP của VPS lại thành HTTPS
+            // Tà đạo: Bọc link HTTP của VPS vào AllOrigins HTTPS
             const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
             const response = await fetch(proxyUrl);
             if (!response.ok) throw new Error("Proxy từ chối kết nối.");
             const data = await response.json();
-            return JSON.parse(data.contents); // Allorigins trả data về trong field 'contents'
+            return JSON.parse(data.contents);
         }
 
         async function handleSearch() {
@@ -265,10 +267,9 @@
             appContainer.style.transform = 'scale(0.98)'; setTimeout(() => appContainer.style.transform = 'scale(1)', 200);
 
             try {
-                // Đường link API của VPS (HTTP)
                 const apiPath = `${vpsUrl}/api/search?q=${encodeURIComponent(query)}`;
                 
-                // Ép buộc chạy qua Proxy HTTPS để qua mặt Safari
+                // Buộc dùng đường hầm HTTPS để qua mặt Safari iOS
                 let data = await fetchViaProxy(apiPath);
                 
                 if (data.error) { logEl.innerHTML = `<span style="color:#f59e0b">${data.error}</span>`; return; }
@@ -354,6 +355,14 @@
         function togglePlayback() { if (audio.paused) audio.play(); else audio.pause(); }
         function resetApp() { audio.pause(); audio.currentTime = 0; updatePlayState(false); document.getElementById('stage').style.display = 'none'; document.getElementById('searchScreen').style.display = 'block'; document.getElementById('statusLog').innerHTML = "Hệ thống sẵn sàng..."; lastActiveIndex = -1; }
         document.getElementById('songInput').addEventListener('keypress', function(e) { if (e.key === 'Enter') handleSearch(); });
+        
+        // ĐĂNG KÝ SERVICE WORKER - TỰ ĐỘNG XÓA CACHE CŨ
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => { 
+                // Cập nhật lại đường dẫn với tham số v= để tránh cache file sw.js
+                navigator.serviceWorker.register('./sw.js?v=13').catch(()=>{}); 
+            }); 
+        }
     </script>
 </body>
 </html>
