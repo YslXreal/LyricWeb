@@ -1,1041 +1,397 @@
-const { Client, GatewayIntentBits, ChannelType, PermissionsBitField, WebhookClient, EmbedBuilder, AttachmentBuilder } = require('discord.js');
-const fs = require('fs-extra');
-const path = require('path');
-const inquirer = require('inquirer');
-const chalk = require('chalk');
-const gradient = require('gradient-string');
-const axios = require('axios');
-const boxen = require('boxen');
-
-// ================= CẤU HÌNH =================
-const CONFIG_PATH = './bot_config.json';
-let config = fs.existsSync(CONFIG_PATH) ? fs.readJSONSync(CONFIG_PATH) : {};
-const saveConfig = () => fs.writeJSONSync(CONFIG_PATH, config, { spaces: 2 });
-
-let autoWarEnabled = config.autoWar !== undefined ? config.autoWar : false;
-let hangWarInterval = null;
-let hangWarConfig = null;
-
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildVoiceStates,
-        GatewayIntentBits.GuildEmojisAndStickers,
-        GatewayIntentBits.GuildWebhooks,
-        GatewayIntentBits.DirectMessages,
-    ],
-    failIfNotExists: false,
-});
-
-// ================= TIỆN ÍCH =================
-const wait = ms => new Promise(r => setTimeout(r, ms));
-
-async function retry(fn, label) {
-    let attempts = 0;
-    while (attempts < 5) {
-        try { return await fn(); } catch (e) {
-            if (e.code === 429) {
-                const ms = e.retryAfter || 5000;
-                console.log(chalk.yellow(`! Rate limit ${label}, đợi ${ms}ms...`));
-                await wait(ms);
-                attempts++;
-            } else throw e;
-        }
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyber Code Lab</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
     }
-    throw new Error(`Too many retries for ${label}`);
-}
-
-async function runWithConcurrency(tasks, concurrency = 50, delayMs = 10) {
-    let index = 0;
-    const total = tasks.length;
-    const next = async () => {
-        if (index >= total) return;
-        const i = index++;
-        try { await tasks[i](); } catch (e) { console.log(chalk.yellow(`Lỗi tác vụ ${i+1}: ${e.message}`)); }
-        if (delayMs > 0) await wait(delayMs);
-        await next();
-    };
-    const workers = Array(Math.min(concurrency, total)).fill().map(() => next());
-    await Promise.all(workers);
-}
-
-function logError(message) {
-    const timestamp = new Date().toISOString();
-    fs.appendFileSync('ysl_errors.log', `[${timestamp}] ${message}\n`);
-}
-
-process.on('unhandledRejection', (reason) => {
-    console.log(chalk.red('❌ Unhandled Rejection:'), reason);
-    logError(`Unhandled Rejection: ${reason}`);
-});
-
-process.on('uncaughtException', (err) => {
-    console.log(chalk.red('❌ Uncaught Exception:'), err.message);
-    logError(`Uncaught Exception: ${err.stack}`);
-});
-
-// ================= GIAO DIỆN =================
-function clearScreen() { console.clear(); }
-function showBanner() {
-    clearScreen();
-    const logo = [
-        '██╗   ██╗███████╗██╗     ██╗  ██╗██████╗     ███████╗',
-        '╚██╗ ██╔╝██╔════╝██║     ██║  ██║██╔══██╗   ██╔════╝',
-        ' ╚████╔╝ ███████╗██║     ███████║██████╔╝   ███████╗',
-        '  ╚██╔╝  ╚════██║██║     ╚════██║██╔══██╗   ╚════██║',
-        '   ██║   ███████║███████╗     ██║██║  ██║██╗███████║',
-        '   ╚═╝   ╚══════╝╚══════╝     ╚═╝╚═╝  ╚═╝╚═╝╚══════╝'
-    ];
-    console.log(gradient.pastel.multiline(logo.join('\n')));
-    console.log(gradient.rainbow('════════════ YSL LXR-5 • BÁ SÀN DISCORD ════════════'));
-    console.log(chalk.yellow('𓆩★𓆪 # YSL • Bá Sàn 𓆩★𓆪'));
-    console.log(chalk.yellow('War sĩ gái 24/7 • Tao chơi mày xem\n'));
-}
-
-// ================= TOKEN =================
-async function getToken() {
-    if (config.token) return config.token;
-    showBanner();
-    const { token } = await inquirer.prompt([{
-        type: 'password', name: 'token', message: '🔑 Nhập Bot Token:',
-        mask: '*'
-    }]);
-    if (!token) { console.log(chalk.red('Token không được để trống.')); process.exit(1); }
-    config.token = token;
-    saveConfig();
-    return token;
-}
-
-// ================= THIẾT LẬP BOT =================
-async function setBotInfo() {
-    showBanner();
-    console.log(boxen(chalk.cyan('◆ CẬP NHẬT THÔNG TIN BOT'), { padding: 1, borderColor: 'cyan' }));
-    const { username } = await inquirer.prompt([{
-        type: 'input', name: 'username',
-        message: '✏️  Username mới (bỏ trống = random):',
-        default: 'YSL_LXR5_' + Math.random().toString(36).substring(2,6)
-    }]);
-    const { avatarUrl } = await inquirer.prompt([{
-        type: 'input', name: 'avatarUrl',
-        message: '🖼️  Link avatar mới (bỏ trống giữ nguyên):'
-    }]);
-    const { statusText } = await inquirer.prompt([{
-        type: 'input', name: 'statusText',
-        message: '💬 Custom status (vd: YSL BÁ SÀN):',
-        default: '𓆩★𓆪 YSL • Bá Sàn 𓆩★𓆪'
-    }]);
-
-    try {
-        if (username) {
-            await retry(() => client.user.setUsername(username), 'setUsername');
-            console.log(chalk.green('✔ Đã đổi username: ' + username));
-        }
-        if (avatarUrl) {
-            const res = await axios.get(avatarUrl, { responseType: 'arraybuffer' });
-            await retry(() => client.user.setAvatar(Buffer.from(res.data)), 'setAvatar');
-            console.log(chalk.green('✔ Đã đổi avatar'));
-        }
-        if (statusText) {
-            client.user.setPresence({
-                activities: [{ name: statusText, type: 4, state: statusText }],
-                status: 'online'
-            });
-            console.log(chalk.green('✔ Status: ' + statusText));
-        }
-    } catch (e) { console.log(chalk.red('✗ Lỗi: ' + e.message)); }
-    await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter về menu' }]);
-}
-
-// ================= AUTO WAR REPLY =================
-const warReplies = [
-    'óc chó à? tag bố mày làm gì =))',
-    'mày là thằng rác rưởi, đừng tag tao nữa =))',
-    'YSL đây, có gì khóc với tao không? =))',
-    'sao mày ngu thế, tag tao hoài vậy =))',
-    'mày muốn tao war mày à? đợi đấy =))',
-    'bố mày đang bận phá server, đừng làm phiền =))',
-    'mày là con chó ghẻ, tag tao để xin xương à =))',
-    'YSL đây, tao không rảnh chơi với mày =))',
-    'địt mẹ mày, tag tao để bị chửi à =))',
-    'mày đúng là đồ bất tài, tag tao làm gì =))'
-];
-
-client.on('messageCreate', async (message) => {
-    if (!autoWarEnabled) return;
-    if (message.author.bot) return;
-    if (message.mentions.has(client.user)) {
-        const reply = warReplies[Math.floor(Math.random() * warReplies.length)];
-        try {
-            await message.reply({
-                content: reply,
-                allowedMentions: { repliedUser: true }
-            });
-            console.log(chalk.magenta(`[Auto War] Đã trả lời ${message.author.tag}: ${reply}`));
-        } catch (e) {
-            console.log(chalk.yellow(`[Auto War] Lỗi gửi reply: ${e.message}`));
-        }
+    canvas#matrix-bg {
+      position: fixed; top: 0; left: 0; z-index: 0;
     }
-});
-
-async function toggleAutoWar() {
-    autoWarEnabled = !autoWarEnabled;
-    config.autoWar = autoWarEnabled;
-    saveConfig();
-    console.log(chalk.green(`✔ Auto War Reply đã ${autoWarEnabled ? 'BẬT' : 'TẮT'}.`));
-    await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter về menu' }]);
-}
-
-// ================= TREO NGÔN =================
-async function getMessageContent() {
-    const { method } = await inquirer.prompt([{
-        type: 'list', name: 'method', message: 'Chọn cách nhập nội dung:',
-        choices: [
-            { name: '1. Mở trình soạn thảo (nano) để nhập nhiều dòng', value: 'editor' },
-            { name: '2. Nhập trực tiếp (dùng \\n để xuống dòng)', value: 'text' },
-            { name: '3. Đọc từ file (đường dẫn file trên máy)', value: 'file' }
-        ]
-    }]);
-
-    if (method === 'editor') {
-        const { edited } = await inquirer.prompt([{
-            type: 'editor', name: 'edited',
-            message: '📝 Soạn nội dung treo ngôn, lưu và thoát:',
-            default: '𓆩★𓆪 YSL • Bá Sàn 𓆩★𓆪\nWar sĩ gái 24/7 • Tao chơi mày xem\n<@1384956170862858272>'
-        }]);
-        return edited;
-    } else if (method === 'file') {
-        const { filePath } = await inquirer.prompt([{
-            type: 'input', name: 'filePath', message: '📂 Đường dẫn file:',
-            validate: value => fs.existsSync(value) ? true : 'File không tồn tại.'
-        }]);
-        return fs.readFileSync(filePath, 'utf8');
-    } else {
-        const { text } = await inquirer.prompt([{
-            type: 'input', name: 'text', message: '💬 Nội dung (dùng \\n để xuống dòng):',
-            default: '𓆩★𓆪 YSL • Bá Sàn 𓆩★𓆪\\nWar sĩ gái 24/7 • Tao chơi mày xem\\n<@1384956170862858272>'
-        }]);
-        return text.replace(/\\n/g, '\n');
+    .container {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column; align-items: center;
+      width: 100%;
     }
-}
-
-async function startHangWar() {
-    if (hangWarInterval) {
-        console.log(chalk.yellow('Treo Ngôn đã đang chạy. Dừng trước khi bắt đầu mới.'));
-        await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter' }]);
-        return;
+    .title {
+      color: #0ff;
+      font-size: 36px;
+      text-shadow: 0 0 20px #0ff, 0 0 40px #0ff;
+      margin-bottom: 20px;
+      animation: flicker 1.5s infinite alternate;
+      text-align: center;
     }
-
-    const { channelId } = await inquirer.prompt([{ type: 'input', name: 'channelId', message: '🆔 ID Kênh cần treo ngôn:' }]);
-    const channel = client.channels.cache.get(channelId);
-    if (!channel || !channel.isTextBased()) {
-        console.log(chalk.red('Kênh không hợp lệ.'));
-        await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter' }]);
-        return;
+    @keyframes flicker {
+      0% { opacity: 1; text-shadow: 0 0 20px #0ff, 0 0 40px #0ff; }
+      50% { opacity: 0.8; text-shadow: 0 0 10px #0ff, 0 0 20px #0ff; }
+      100% { opacity: 1; text-shadow: 0 0 30px #0ff, 0 0 60px #0ff; }
     }
+    .terminal {
+      background: rgba(0, 0, 0, 0.85);
+      border: 2px solid #0f0;
+      border-radius: 5px;
+      width: 90%;
+      max-width: 700px;
+      height: 300px;
+      display: flex; flex-direction: column;
+      justify-content: flex-end;
+      padding: 15px;
+      box-shadow: 0 0 30px rgba(0,255,0,0.3);
+    }
+    #terminal-output {
+      flex-grow: 1;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      color: #0f0;
+      font-size: 16px;
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+    #terminal-input-line {
+      display: flex; align-items: center;
+    }
+    .prompt {
+      color: #0f0; margin-right: 10px;
+    }
+    #cmd-input {
+      background: transparent; border: none; color: #0f0;
+      font: inherit; outline: none; flex-grow: 1;
+      caret-color: #0f0;
+    }
+    .button {
+      background: transparent;
+      border: 2px solid #ff0;
+      color: #ff0;
+      font: inherit;
+      font-size: 20px;
+      padding: 10px 30px;
+      cursor: pointer;
+      margin-top: 20px;
+      border-radius: 5px;
+      text-shadow: 0 0 10px #ff0;
+      transition: all 0.3s;
+    }
+    .button:hover {
+      background: #ff0;
+      color: #000;
+      box-shadow: 0 0 30px #ff0;
+    }
+    /* Canvas cho battle sẽ ẩn, khi gọi sẽ hiện full */
+    #battle-canvas {
+      display: none; position: fixed; top: 0; left: 0; z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="matrix-bg"></canvas>
+  <div class="container">
+    <h1 class="title">CYBER CODE LAB</h1>
+    <div class="terminal">
+      <div id="terminal-output">Chào mừng! Gõ 'help' để xem lệnh.<br></div>
+      <div id="terminal-input-line">
+        <span class="prompt">guest@cyber:~$</span>
+        <input type="text" id="cmd-input" autofocus>
+      </div>
+    </div>
+    <button class="button" id="firework-btn">💥 PHÁO HOA CODE 💥</button>
+  </div>
+  <canvas id="battle-canvas"></canvas>
 
-    console.log(chalk.cyan('◆ Chuẩn bị nội dung treo ngôn:'));
-    const message = await getMessageContent();
-
-    const { imageUrl, filePath, interval } = await inquirer.prompt([
-        { type: 'input', name: 'imageUrl', message: '🖼️ Link ảnh/GIF kèm theo (bỏ trống nếu không):' },
-        { type: 'input', name: 'filePath', message: '📁 File đính kèm (đường dẫn, bỏ trống nếu không):' },
-        { type: 'input', name: 'interval', message: '⏱️ Chu kỳ gửi (giây, từ 0.01 đến 10):',
-          validate: value => {
-              const num = parseFloat(value);
-              if (isNaN(num) || num < 0.01 || num > 10) return 'Vui lòng nhập số từ 0.01 đến 10.';
-              return true;
-          },
-          default: '5'
+  <script>
+    (function() {
+      // ========== MATRIX BACKGROUND ==========
+      const bgCanvas = document.getElementById('matrix-bg');
+      const bgCtx = bgCanvas.getContext('2d');
+      let bgW, bgH;
+      function resizeBg() {
+        bgW = bgCanvas.width = window.innerWidth;
+        bgH = bgCanvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', resizeBg);
+      resizeBg();
+      const matrixChars = 'ｱｲｳｴｵｶｷｸｹｺ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ<>{}[]()/#@$%&*+-=;:,.?';
+      const fontSize = 14;
+      const columns = Math.floor(bgW / fontSize);
+      const drops = new Array(columns).fill(0).map(() => Math.random() * bgH / fontSize);
+      function drawMatrix() {
+        bgCtx.fillStyle = 'rgba(0,0,0,0.05)';
+        bgCtx.fillRect(0,0,bgW,bgH);
+        bgCtx.fillStyle = '#0a0';
+        bgCtx.font = fontSize + 'px "Courier New"';
+        for (let i = 0; i < columns; i++) {
+          const ch = matrixChars[Math.floor(Math.random() * matrixChars.length)];
+          const x = i * fontSize;
+          const y = drops[i] * fontSize;
+          bgCtx.fillText(ch, x, y);
+          if (y > bgH / fontSize && Math.random() > 0.975) drops[i] = 0;
+          drops[i]++;
         }
-    ]);
+      }
+      setInterval(drawMatrix, 33);
 
-    const intervalMs = parseFloat(interval) * 1000;
-    hangWarConfig = { channelId, message, intervalMs, imageUrl: imageUrl || null, filePath: filePath || null };
+      // ========== TERMINAL ==========
+      const termOutput = document.getElementById('terminal-output');
+      const cmdInput = document.getElementById('cmd-input');
+      function appendTerminal(text) {
+        termOutput.textContent += text + '\n';
+        termOutput.scrollTop = termOutput.scrollHeight;
+      }
+      cmdInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          const cmd = cmdInput.value.trim().toLowerCase();
+          appendTerminal('guest@cyber:~$ ' + cmd);
+          cmdInput.value = '';
+          if (cmd === 'anime') {
+            appendTerminal('Bắt đầu phim chiến đấu...');
+            startAnimeBattle();
+          } else if (cmd === 'help') {
+            appendTerminal('Lệnh có sẵn:');
+            appendTerminal('  anime - Xem phim chiến đấu code');
+            appendTerminal('  clear - Xóa màn hình terminal');
+            appendTerminal('  help  - Hiện trợ giúp này');
+          } else if (cmd === 'clear') {
+            termOutput.textContent = '';
+          } else {
+            appendTerminal('Lệnh không tìm thấy: ' + cmd + '. Gõ "help".');
+          }
+        }
+      });
+      document.addEventListener('click', () => cmdInput.focus());
 
-    hangWarInterval = setInterval(async () => {
-        try {
-            const payload = { content: hangWarConfig.message };
-            if (hangWarConfig.imageUrl) {
-                payload.embeds = [new EmbedBuilder().setImage(hangWarConfig.imageUrl).setColor('#FF1493')];
+      // ========== ANIME BATTLE (giống code trước, rút gọn) ==========
+      const battleCanvas = document.getElementById('battle-canvas');
+      const battleCtx = battleCanvas.getContext('2d');
+      let battleW, battleH;
+      function resizeBattle() {
+        battleW = battleCanvas.width = window.innerWidth;
+        battleH = battleCanvas.height = window.innerHeight;
+      }
+      resizeBattle();
+      window.addEventListener('resize', resizeBattle);
+      let battleActive = false;
+      let entities = [], projectiles = [], particles = [];
+      let battleStartTime = 0;
+      const BATTLE_DURATION = 120; // seconds
+      let coreHp = 20;
+      let bossSpawned = false;
+      let bossEntity = null;
+      let phase = 0;
+
+      // Audio (simple)
+      let audioCtx = null;
+      function initAudio() {
+        if (!audioCtx) {
+          try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+        }
+      }
+      document.addEventListener('click', initAudio, { once: true });
+      cmdInput.addEventListener('keydown', initAudio, { once: true });
+
+      function playTone(freq, dur, type='square', vol=0.05) {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type; osc.frequency.value = freq;
+        gain.gain.value = vol;
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + dur);
+      }
+      function playBgMusic() {
+        const notes = [110,130,146,165,174,196,220,246];
+        for(let i=0;i<40;i++) playTone(notes[i%notes.length],0.4,'triangle',0.02,audioCtx.currentTime+i*0.5);
+      }
+
+      // Entities (giản lược)
+      class Entity {
+        constructor(x,y,type,side){
+          this.x=x;this.y=y;this.type=type;this.side=side;
+          this.speed=type==='boss'?20:type==='sniper'?30:50+Math.random()*50;
+          this.hp=type==='boss'?30:type==='general'?4:1;
+          this.maxHp=this.hp;
+          this.shootTimer=type==='boss'?0.3:type==='sniper'?2:1+Math.random();
+          this.shootCooldown=this.shootTimer;
+          this.char=type==='boss'?'◈':type==='general'?'Ω':type==='sniper'?'ψ':String.fromCharCode(0x30A0+Math.random()*96);
+          this.color=side==='blue'?'#4da6ff':(type==='boss'?'#c715ff':'#ff4d4d');
+        }
+        update(dt,projectiles){
+          if(this.type==='core')return;
+          this.x+=this.side==='blue'?this.speed*dt:-this.speed*dt;
+          this.shootCooldown-=dt;
+          if(this.shootCooldown<=0){
+            const dir=this.side==='blue'?1:-1;
+            projectiles.push({x:this.x+10,y:this.y-6,vx:dir*(this.type==='boss'?500:350),color:this.color,char:'➤'});
+            this.shootCooldown=this.shootTimer;
+          }
+        }
+        draw(ctx){
+          ctx.fillStyle=this.color;
+          ctx.font='18px "Courier New"';
+          ctx.fillText(this.char,this.x,this.y);
+          if(this.type==='boss'||this.type==='general'){
+            const bw=30,bh=4;
+            ctx.fillStyle='#333';
+            ctx.fillRect(this.x-5,this.y-18,bw,bh);
+            ctx.fillStyle=this.color;
+            ctx.fillRect(this.x-5,this.y-18,bw*(this.hp/this.maxHp),bh);
+          }
+        }
+      }
+
+      function spawnWave(phaseLevel){
+        if(phaseLevel===0){
+          for(let i=0;i<8;i++) entities.push(new Entity(30,100+i*60,'soldier','blue'));
+          for(let i=0;i<10;i++) entities.push(new Entity(battleW-60,80+i*55,'soldier','red'));
+          entities.push(new Entity(battleW/2,battleH/2,'core','blue'));
+        }else if(phaseLevel===1){
+          for(let i=0;i<4;i++) entities.push(new Entity(20,150+i*80,'soldier','blue'));
+          for(let i=0;i<2;i++) entities.push(new Entity(40,200+i*100,'sniper','blue'));
+          for(let i=0;i<6;i++) entities.push(new Entity(battleW-50,100+i*70,'soldier','red'));
+          for(let i=0;i<1;i++) entities.push(new Entity(battleW-80,250+i*120,'general','red'));
+        }else if(phaseLevel===2){
+          bossEntity=new Entity(battleW-120,battleH/2-30,'boss','red');
+          entities.push(bossEntity);
+          for(let i=0;i<4;i++) entities.push(new Entity(battleW-80,100+i*80,'soldier','red'));
+          bossSpawned=true;
+        }
+      }
+
+      function processCollisions(){
+        for(let i=projectiles.length-1;i>=0;i--){
+          let p=projectiles[i];
+          let hit=false;
+          for(let j=entities.length-1;j>=0;j--){
+            let e=entities[j];
+            if(e.type==='core')continue;
+            if((p.vx>0&&e.side==='blue')||(p.vx<0&&e.side==='red'))continue;
+            if(Math.abs(p.x-e.x)<18&&Math.abs(p.y-e.y)<18){
+              e.hp--;
+              if(e.hp<=0){
+                for(let k=0;k<10;k++) particles.push({x:e.x,y:e.y,vx:(Math.random()-0.5)*200,vy:(Math.random()-0.5)*200,life:1,color:e.color,char:'*'});
+                if(e===bossEntity) bossEntity=null;
+                entities.splice(j,1);
+              }
+              projectiles.splice(i,1);
+              hit=true; break;
             }
-            if (hangWarConfig.filePath && fs.existsSync(hangWarConfig.filePath)) {
-                payload.files = [new AttachmentBuilder(hangWarConfig.filePath)];
+          }
+        }
+        // Core damage
+        let core=entities.find(e=>e.type==='core');
+        if(core){
+          for(let e of entities){
+            if(e.side==='red'&&Math.abs(e.x-core.x)<30&&Math.abs(e.y-core.y)<30){
+              coreHp--;
+              e.hp=0;
+              entities.splice(entities.indexOf(e),1);
             }
-            await channel.send(payload);
-            console.log(chalk.magenta(`[Treo Ngôn] Đã gửi vào #${channel.name}`));
-        } catch (e) {
-            console.log(chalk.yellow(`[Treo Ngôn] Lỗi: ${e.message}`));
-            logError(`HangWar error: ${e.message}`);
+          }
+          if(coreHp<=0) endBattle('defeat');
         }
-    }, intervalMs);
+      }
 
-    console.log(chalk.green(`✔ Treo Ngôn đã bắt đầu trong kênh ${channel.name}, mỗi ${interval}s.`));
-    await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter về menu' }]);
-}
+      function endBattle(result){
+        battleActive=false;
+        battleCanvas.style.display='none';
+        let msg=result==='victory'?'SYSTEM RESTORED':'SYSTEM CORRUPTED';
+        appendTerminal('Phim kết thúc: '+msg);
+        if(bossEntity&&bossEntity.hp<=0) appendTerminal('Boss bị tiêu diệt!');
+        if(coreHp<=0) appendTerminal('Core đã bị phá hủy...');
+      }
 
-async function stopHangWar() {
-    if (!hangWarInterval) {
-        console.log(chalk.yellow('Không có Treo Ngôn nào đang chạy.'));
-        await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter' }]);
-        return;
-    }
-    clearInterval(hangWarInterval);
-    hangWarInterval = null;
-    hangWarConfig = null;
-    console.log(chalk.green('✔ Treo Ngôn đã dừng hoàn toàn.'));
-    await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter về menu' }]);
-}
-
-// ================= GỬI FILE / ẢNH EMBED =================
-async function sendAttachment() {
-    showBanner();
-    const { channelId, filePath, imageUrl, caption } = await inquirer.prompt([
-        { type: 'input', name: 'channelId', message: '🆔 ID Kênh:' },
-        { type: 'input', name: 'filePath', message: '📁 Đường dẫn file (bỏ trống nếu chỉ gửi ảnh):' },
-        { type: 'input', name: 'imageUrl', message: '🖼️ Link ảnh (Discord CDN, Imgur...):' },
-        { type: 'input', name: 'caption', message: '💬 Chú thích:' }
-    ]);
-
-    const channel = client.channels.cache.get(channelId);
-    if (!channel || !channel.isTextBased()) {
-        console.log(chalk.red('Kênh không hợp lệ.'));
-        await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter' }]);
-        return;
-    }
-
-    try {
-        const payload = {};
-        if (caption) payload.content = caption;
-        if (imageUrl) payload.embeds = [new EmbedBuilder().setImage(imageUrl).setColor('#FF1493')];
-        if (filePath && fs.existsSync(filePath)) payload.files = [new AttachmentBuilder(filePath)];
-        await channel.send(payload);
-        console.log(chalk.green('✔ Đã gửi.'));
-    } catch (e) {
-        console.log(chalk.red(`✗ Lỗi: ${e.message}`));
-    }
-    await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter về menu' }]);
-}
-
-// ================= CÁC CHỨC NĂNG NUKER & TIỆN ÍCH =================
-async function checkAdmin(guild) {
-    return guild.members.me.permissions.has(PermissionsBitField.Flags.Administrator);
-}
-
-async function spamMessages(channel, content, times, imageUrl = null, filePath = null) {
-    for (let i = 0; i < times; i++) {
-        try {
-            const payload = { content };
-            if (imageUrl) payload.embeds = [new EmbedBuilder().setImage(imageUrl).setColor('#FF1493')];
-            if (filePath && fs.existsSync(filePath)) payload.files = [new AttachmentBuilder(filePath)];
-            await retry(() => channel.send(payload), `spam ${i+1}/${times} #${channel.name}`);
-            if ((i+1) % 10 === 0 || i === times - 1) {
-                console.log(chalk.magenta(`   └─ Gửi ${i+1}/${times} tin`));
-            }
-            await wait(50);
-        } catch (e) { console.log(chalk.yellow(`   └─ Lỗi: ${e.message}`)); }
-    }
-}
-
-async function spamAndRaid(guild) {
-    const { name, count, msg, invLink, times, imageUrl, filePath } = await inquirer.prompt([
-        { type: 'input', name: 'name', message: '📢 Tên kênh:', default: 'ysl-on-top' },
-        { type: 'number', name: 'count', message: '🔢 Số lượng kênh:', default: 50 },
-        { type: 'input', name: 'msg', message: '💬 Nội dung:', default: '@everyone @here YSL LXR-5 SỞ HỮU! https://discord.gg/ysl' },
-        { type: 'input', name: 'invLink', message: '🔗 Link chèn thêm:' },
-        { type: 'number', name: 'times', message: '🔁 Số tin mỗi kênh:', default: 10 },
-        { type: 'input', name: 'imageUrl', message: '🖼️ Link ảnh kèm (bỏ trống nếu không):' },
-        { type: 'input', name: 'filePath', message: '📁 File đính kèm (đường dẫn, bỏ trống):' }
-    ]);
-    const final = invLink ? `${msg}\n${invLink}` : msg;
-    const base = name.replace(/\s+/g, '-').slice(0, 25) || 'ysl';
-    const tasks = [];
-    for (let i = 0; i < count; i++) {
-        tasks.push(async () => {
-            const ch = await retry(() => guild.channels.create({ name: `${base}-${i}`, type: ChannelType.GuildText }), 'spam');
-            console.log(chalk.green(`✔ Tạo ${base}-${i}`));
-            await spamMessages(ch, final, times, imageUrl || null, filePath || null);
-        });
-    }
-    await runWithConcurrency(tasks, 30, 30);
-}
-
-async function raidAll(guild) {
-    const channels = guild.channels.cache.filter(c =>
-        c.type === ChannelType.GuildText &&
-        c.permissionsFor(guild.members.me).has(PermissionsBitField.Flags.SendMessages)
-    );
-    if (channels.size === 0) {
-        console.log(chalk.yellow('Không có kênh nào.'));
-        await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter' }]);
-        return;
-    }
-    const { msg, invLink, times, imageUrl, filePath } = await inquirer.prompt([
-        { type: 'input', name: 'msg', message: '💬 Nội dung:', default: '@everyone @here YSL LXR-5 XÂM CHIẾM!' },
-        { type: 'input', name: 'invLink', message: '🔗 Link chèn thêm:' },
-        { type: 'number', name: 'times', message: '🔁 Số tin mỗi kênh:', default: 10 },
-        { type: 'input', name: 'imageUrl', message: '🖼️ Link ảnh kèm (bỏ trống nếu không):' },
-        { type: 'input', name: 'filePath', message: '📁 File đính kèm (đường dẫn, bỏ trống):' }
-    ]);
-    const final = invLink ? `${msg}\n${invLink}` : msg;
-    console.log(chalk.cyan(`◆ Raid ${channels.size} kênh, mỗi kênh ${times} tin...`));
-    const tasks = Array.from(channels.values()).map(c => () => spamMessages(c, final, times, imageUrl || null, filePath || null));
-    await runWithConcurrency(tasks, 30, 50);
-    console.log(chalk.green('✔ Hoàn tất.'));
-    await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter' }]);
-}
-
-async function superNuke(guild) {
-    showBanner();
-    console.log(boxen(chalk.bgRed.white(' SUPER NUKE '), { padding: 1, borderColor: 'red' }));
-    const { confirm } = await inquirer.prompt([{ type: 'confirm', name: 'confirm', message: 'Xác nhận hủy diệt?', default: false }]);
-    if (!confirm) return;
-
-    const { cName, cCount, rMsg, invLink, rTimes, roleName, roleCount, sName, iconUrl, imageUrl, filePath } = await inquirer.prompt([
-        { type: 'input', name: 'cName', message: '📢 Tên kênh mới:', default: 'ysl-on-top' },
-        { type: 'number', name: 'cCount', message: '🔢 Số kênh:', default: 50 },
-        { type: 'input', name: 'rMsg', message: '💬 Nội dung:', default: '@everyone @here YSL LXR-5 HỦY DIỆT! https://discord.gg/ysl' },
-        { type: 'input', name: 'invLink', message: '🔗 Link chèn:' },
-        { type: 'number', name: 'rTimes', message: '🔁 Số tin/kênh:', default: 10 },
-        { type: 'input', name: 'roleName', message: '🎭 Tên role:', default: 'YSL' },
-        { type: 'number', name: 'roleCount', message: '🔢 Số role:', default: 20 },
-        { type: 'input', name: 'sName', message: '✏️  Tên server mới:', default: 'YSL LXR-5 ON TOP' },
-        { type: 'input', name: 'iconUrl', message: '🖼️  Link icon (để trống giữ):' },
-        { type: 'input', name: 'imageUrl', message: '🖼️ Link ảnh kèm mỗi tin (bỏ trống nếu không):' },
-        { type: 'input', name: 'filePath', message: '📁 File đính kèm (đường dẫn, bỏ trống):' }
-    ]);
-    const final = invLink ? `${rMsg}\n${invLink}` : rMsg;
-
-    console.log(chalk.red('◆ BẮT ĐẦU SUPER NUKE...'));
-
-    // Xóa sạch
-    const channels = guild.channels.cache.filter(c => c.deletable);
-    await runWithConcurrency(Array.from(channels.values()).map(c => () => retry(() => c.delete(), 'del '+c.name)), 50, 5);
-    const roles = guild.roles.cache.filter(r => r.editable && r.name !== '@everyone');
-    await runWithConcurrency(Array.from(roles.values()).map(r => () => retry(() => r.delete(), 'del role '+r.name)), 50, 5);
-    try {
-        const emojis = guild.emojis.cache;
-        await runWithConcurrency(Array.from(emojis.values()).map(e => () => retry(() => e.delete(), 'del emoji '+e.name)), 50, 5);
-        const stickers = await guild.stickers.fetch().catch(() => null);
-        if (stickers) await runWithConcurrency(Array.from(stickers.values()).map(s => () => retry(() => s.delete(), 'del sticker '+s.name)), 50, 5);
-        const invites = await guild.invites.fetch().catch(() => null);
-        if (invites) await runWithConcurrency(Array.from(invites.values()).map(inv => () => retry(() => inv.delete(), 'del invite')), 50, 5);
-        const webhooks = await guild.fetchWebhooks().catch(() => null);
-        if (webhooks) await runWithConcurrency(Array.from(webhooks.values()).map(wh => () => retry(() => wh.delete(), 'del webhook')), 50, 5);
-    } catch {}
-
-    const base = cName.replace(/\s+/g, '-').slice(0, 25) || 'ysl';
-    const cTasks = [];
-    for (let i = 0; i < cCount; i++) {
-        cTasks.push(async () => {
-            const ch = await retry(() => guild.channels.create({ name: `${base}-${i}`, type: ChannelType.GuildText }), 'spam');
-            console.log(chalk.green(`✔ ${base}-${i}`));
-            await spamMessages(ch, final, rTimes, imageUrl || null, filePath || null);
-        });
-    }
-    await runWithConcurrency(cTasks, 30, 30);
-
-    const rTasks = [];
-    for (let i = 0; i < roleCount; i++) {
-        rTasks.push(() => retry(() => guild.roles.create({ name: `${roleName}-${i}`, color: 'Random' }), 'spam role'));
-    }
-    await runWithConcurrency(rTasks, 50, 5);
-    console.log(chalk.green('✔ Đã tạo ' + roleCount + ' role.'));
-
-    try { await retry(() => guild.setName(sName), 'rename'); console.log(chalk.green('✔ Tên: ' + sName)); } catch {}
-    if (iconUrl) {
-        try {
-            const res = await axios.get(iconUrl, { responseType: 'arraybuffer' });
-            await retry(() => guild.setIcon(Buffer.from(res.data)), 'setIcon');
-            console.log(chalk.green('✔ Icon mới.'));
-        } catch {}
-    }
-    console.log(boxen(chalk.green(' SUPER NUKE HOÀN TẤT! '), { padding: 1, borderColor: 'green' }));
-    await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter về menu' }]);
-}
-
-// Các hàm đơn lẻ (tăng tốc tối đa)
-async function delAllChannels(guild) {
-    const chans = guild.channels.cache.filter(c => c.deletable);
-    await runWithConcurrency(Array.from(chans.values()).map(c => () => retry(() => c.delete(), 'del '+c.name)), 50, 5);
-}
-async function delAllRoles(guild) {
-    const roles = guild.roles.cache.filter(r => r.editable && r.name !== '@everyone');
-    await runWithConcurrency(Array.from(roles.values()).map(r => () => retry(() => r.delete(), 'del role '+r.name)), 50, 5);
-}
-async function delAllEmojis(guild) {
-    const emojis = guild.emojis.cache;
-    await runWithConcurrency(Array.from(emojis.values()).map(e => () => retry(() => e.delete(), 'del emoji '+e.name)), 50, 5);
-}
-async function delAllStickers(guild) {
-    const stickers = await guild.stickers.fetch().catch(() => null);
-    if (stickers) await runWithConcurrency(Array.from(stickers.values()).map(s => () => retry(() => s.delete(), 'del sticker '+s.name)), 50, 5);
-}
-async function delAllInvites(guild) {
-    const invites = await guild.invites.fetch().catch(() => null);
-    if (invites) await runWithConcurrency(Array.from(invites.values()).map(inv => () => retry(() => inv.delete(), 'del invite')), 50, 5);
-}
-async function delAllWebhooks(guild) {
-    const hooks = await guild.fetchWebhooks().catch(() => null);
-    if (hooks) await runWithConcurrency(Array.from(hooks.values()).map(wh => () => retry(() => wh.delete(), 'del webhook')), 50, 5);
-}
-async function banAll(guild) {
-    const members = await guild.members.fetch().catch(() => null);
-    if (!members) return;
-    const targets = members.filter(m => m.bannable && m.id !== guild.ownerId && m.id !== client.user.id);
-    await runWithConcurrency(Array.from(targets.values()).map(m => () => retry(() => m.ban({ reason: 'YSL LXR-5' }), 'ban '+m.user.tag)), 30, 80);
-}
-async function kickAll(guild) {
-    const members = await guild.members.fetch().catch(() => null);
-    if (!members) return;
-    const targets = members.filter(m => m.kickable && m.id !== guild.ownerId && m.id !== client.user.id);
-    await runWithConcurrency(Array.from(targets.values()).map(m => () => retry(() => m.kick('YSL LXR-5'), 'kick '+m.user.tag)), 30, 80);
-}
-async function renameG(guild) {
-    const { name } = await inquirer.prompt([{ type: 'input', name: 'name', message: '✏️  Tên mới:' }]);
-    try { await retry(() => guild.setName(name), 'rename'); console.log(chalk.green('✔ ' + name)); } catch {}
-    await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter' }]);
-}
-async function chIcon(guild) {
-    const { url } = await inquirer.prompt([{ type: 'input', name: 'url', message: '🖼️  Link icon:' }]);
-    if (!url) return;
-    try {
-        const res = await axios.get(url, { responseType: 'arraybuffer' });
-        await retry(() => guild.setIcon(Buffer.from(res.data)), 'setIcon');
-        console.log(chalk.green('✔ Đã đổi.'));
-    } catch {}
-    await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter' }]);
-}
-async function spamR(guild) {
-    const { name, count } = await inquirer.prompt([
-        { type: 'input', name: 'name', message: '🎭 Tên role:', default: 'YSL' },
-        { type: 'number', name: 'count', message: '🔢 Số lượng:', default: 20 }
-    ]);
-    const tasks = [];
-    for (let i = 0; i < count; i++) tasks.push(() => retry(() => guild.roles.create({ name: `${name}-${i}`, color: 'Random' }), 'spam role'));
-    await runWithConcurrency(tasks, 50, 5);
-    console.log(chalk.green('✔ ' + count + ' role.'));
-}
-async function purgeCh(guild) {
-    const { id } = await inquirer.prompt([{ type: 'input', name: 'id', message: '🆔 ID kênh:' }]);
-    const ch = guild.channels.cache.get(id);
-    if (!ch?.isTextBased()) { console.log(chalk.red('Sai')); await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵' }]); return; }
-    let deleted = 0, msgs;
-    do {
-        msgs = await ch.messages.fetch({ limit: 100 });
-        if (msgs.size === 0) break;
-        const batch = msgs.filter(m => m.deletable);
-        if (batch.size > 0) { await retry(() => ch.bulkDelete(batch, true), 'purge'); deleted += batch.size; }
-        await wait(1000);
-    } while (msgs.size === 100);
-    console.log(chalk.green('✔ Xóa ' + deleted + ' tin.'));
-    await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵' }]);
-}
-
-// Các tiện ích nâng cao
-async function cleanupWebhooks(guild) {
-    try {
-        const hooks = await guild.fetchWebhooks();
-        if (hooks.size === 0) return console.log(chalk.yellow('Không có webhooks.'));
-        const tasks = Array.from(hooks.values()).map(h => () => retry(() => h.delete(), 'del webhook ' + h.name));
-        await runWithConcurrency(tasks, 50, 5);
-        console.log(chalk.green('✔ Đã xóa tất cả webhooks.'));
-    } catch (e) { console.log(chalk.red('✗ Lỗi: ' + e.message)); }
-}
-async function massMessageToAllChannels(guild) {
-    const channels = guild.channels.cache.filter(c => c.type === ChannelType.GuildText && c.permissionsFor(guild.members.me).has(PermissionsBitField.Flags.SendMessages));
-    if (channels.size === 0) return console.log(chalk.yellow('Không có kênh hợp lệ.'));
-    const { msg, imageUrl, filePath } = await inquirer.prompt([
-        { type: 'input', name: 'msg', message: '💬 Nội dung gửi hàng loạt:' },
-        { type: 'input', name: 'imageUrl', message: '🖼️ Link ảnh kèm (bỏ trống nếu không):' },
-        { type: 'input', name: 'filePath', message: '📁 File đính kèm (đường dẫn, bỏ trống):' }
-    ]);
-    const tasks = Array.from(channels.values()).map(c => async () => {
-        const payload = { content: msg };
-        if (imageUrl) payload.embeds = [new EmbedBuilder().setImage(imageUrl).setColor('#FF1493')];
-        if (filePath && fs.existsSync(filePath)) payload.files = [new AttachmentBuilder(filePath)];
-        await retry(() => c.send(payload), 'mass msg ' + c.name);
-        console.log(chalk.green(`✔ Đã gửi đến #${c.name}`));
-    });
-    await runWithConcurrency(tasks, 30, 80);
-    console.log(chalk.green('✔ Hoàn tất.'));
-}
-async function massReact(guild) {
-    const { channelId, messageId, emoji } = await inquirer.prompt([
-        { type: 'input', name: 'channelId', message: '🆔 ID Kênh:' },
-        { type: 'input', name: 'messageId', message: '🆔 ID Tin nhắn:' },
-        { type: 'input', name: 'emoji', message: '😀 Emoji (vd: 😈):' }
-    ]);
-    const ch = guild.channels.cache.get(channelId);
-    if (!ch || !ch.isTextBased()) return console.log(chalk.red('Kênh không hợp lệ.'));
-    try {
-        const msg = await ch.messages.fetch(messageId);
-        await msg.react(emoji);
-        console.log(chalk.green('✔ Đã react.'));
-    } catch (e) { console.log(chalk.red('✗ Lỗi: ' + e.message)); }
-}
-async function cloneChannel(guild) {
-    const { channelId, newName } = await inquirer.prompt([
-        { type: 'input', name: 'channelId', message: '🆔 ID Kênh cần sao chép:' },
-        { type: 'input', name: 'newName', message: '✏️  Tên kênh mới (bỏ trống = thêm "-clone"):' }
-    ]);
-    const ch = guild.channels.cache.get(channelId);
-    if (!ch) return console.log(chalk.red('Kênh không tồn tại.'));
-    try {
-        const cloned = await ch.clone({ name: newName || ch.name + '-clone' });
-        console.log(chalk.green('✔ Đã sao chép thành kênh: ' + cloned.name));
-    } catch (e) { console.log(chalk.red('✗ Lỗi: ' + e.message)); }
-}
-async function createInvite(guild) {
-    try {
-        const invite = await guild.invites.create('', { maxAge: 0, maxUses: 0, unique: true });
-        console.log(chalk.green('✔ Invite: ' + invite.url));
-    } catch (e) { console.log(chalk.red('✗ Lỗi: ' + e.message)); }
-}
-async function changeBotNickname(guild) {
-    const { nick } = await inquirer.prompt([{ type: 'input', name: 'nick', message: '✏️  Nickname mới (để trống để xóa):' }]);
-    try {
-        await guild.members.me.setNickname(nick || null);
-        console.log(chalk.green('✔ Đã đổi nickname.'));
-    } catch (e) { console.log(chalk.red('✗ Lỗi: ' + e.message)); }
-}
-async function massMoveVoice(guild) {
-    const { targetChannelId } = await inquirer.prompt([{ type: 'input', name: 'targetChannelId', message: '🆔 ID Kênh voice đích:' }]);
-    const target = guild.channels.cache.get(targetChannelId);
-    if (!target || target.type !== ChannelType.GuildVoice) return console.log(chalk.red('Kênh không hợp lệ.'));
-    const members = await guild.members.fetch();
-    const voiceMembers = members.filter(m => m.voice.channel && m.voice.channel.id !== targetChannelId && m.manageable);
-    const tasks = Array.from(voiceMembers.values()).map(m => async () => {
-        await retry(() => m.voice.setChannel(target), 'move ' + m.user.tag);
-        console.log(chalk.green(`✔ Đã di chuyển ${m.user.tag}`));
-    });
-    await runWithConcurrency(tasks, 30, 100);
-    console.log(chalk.green('✔ Hoàn tất.'));
-}
-
-// ================= MASS DM =================
-async function massDM() {
-    showBanner();
-    const { userId, message, imageUrl } = await inquirer.prompt([
-        { type: 'input', name: 'userId', message: '👤 ID Người nhận (hoặc danh sách ID cách nhau dấu cách):' },
-        { type: 'input', name: 'message', message: '💬 Nội dung tin nhắn:' },
-        { type: 'input', name: 'imageUrl', message: '🖼️ Link ảnh kèm (bỏ trống nếu không):' }
-    ]);
-
-    const ids = userId.split(/\s+/).filter(Boolean);
-    console.log(chalk.cyan(`◆ Gửi DM đến ${ids.length} người...`));
-    const tasks = ids.map(id => async () => {
-        try {
-            const user = await client.users.fetch(id);
-            if (!user) return;
-            const payload = { content: message };
-            if (imageUrl) payload.embeds = [new EmbedBuilder().setImage(imageUrl).setColor('#FF1493')];
-            await retry(() => user.send(payload), 'dm ' + id);
-            console.log(chalk.green(`✔ Đã gửi DM đến ${user.tag}`));
-        } catch (e) {
-            console.log(chalk.yellow(`  Lỗi DM ${id}: ${e.message}`));
+      let battleAnimId;
+      function battleLoop(ts){
+        if(!battleActive) return;
+        let elapsed=(ts-battleStartTime)/1000;
+        if(elapsed>30&&phase===0){phase=1;spawnWave(1);}
+        if(elapsed>70&&!bossSpawned&&phase===1){phase=2;spawnWave(2);}
+        if(elapsed>BATTLE_DURATION){
+          if(coreHp>0&&(!bossEntity||bossEntity.hp<=0)) endBattle('victory');
+          else endBattle('defeat');
+          return;
         }
-    });
-    await runWithConcurrency(tasks, 15, 500);
-    console.log(chalk.green('✔ Hoàn tất.'));
-    await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter' }]);
-}
-
-// ================= AUTO REACT =================
-async function autoReact() {
-    showBanner();
-    const { userId, emoji } = await inquirer.prompt([
-        { type: 'input', name: 'userId', message: '👤 ID Người dùng cần auto react:' },
-        { type: 'input', name: 'emoji', message: '😀 Emoji (vd: 😈):' }
-    ]);
-
-    console.log(chalk.cyan(`◆ Auto react mọi tin nhắn mới của ${userId} với ${emoji}`));
-    console.log(chalk.yellow('  (Nhấn Enter để dừng, chạy nền)'));
-    const listener = async (message) => {
-        if (message.author.id !== userId) return;
-        try {
-            await message.react(emoji);
-            console.log(chalk.green(`✔ Đã react tin nhắn của ${message.author.tag}`));
-        } catch (e) {
-            console.log(chalk.yellow(`  Lỗi react: ${e.message}`));
+        const dt=0.016;
+        for(let e of entities) e.update(dt,projectiles);
+        for(let p of projectiles) p.x+=p.vx*dt;
+        for(let p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=2*dt;}
+        projectiles=projectiles.filter(p=>p.x>0&&p.x<battleW);
+        particles=particles.filter(p=>p.life>0);
+        processCollisions();
+        // Draw
+        battleCtx.clearRect(0,0,battleW,battleH);
+        battleCtx.fillStyle='rgba(0,0,0,0.3)';battleCtx.fillRect(0,0,battleW,battleH);
+        for(let p of particles){
+          battleCtx.globalAlpha=p.life;
+          battleCtx.fillStyle=p.color;
+          battleCtx.fillText(p.char,p.x,p.y);
+          battleCtx.globalAlpha=1;
         }
-    };
-    client.on('messageCreate', listener);
-    await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter để dừng' }]);
-    client.off('messageCreate', listener);
-    console.log(chalk.green('✔ Auto react đã dừng.'));
-}
-
-// ================= SPAM STICKER =================
-async function spamSticker(guild) {
-    const { channelId, stickerId } = await inquirer.prompt([
-        { type: 'input', name: 'channelId', message: '🆔 ID Kênh:' },
-        { type: 'input', name: 'stickerId', message: '🆔 ID Sticker:' }
-    ]);
-    const channel = guild.channels.cache.get(channelId);
-    if (!channel || !channel.isTextBased()) {
-        console.log(chalk.red('Kênh không hợp lệ.'));
-        await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter' }]);
-        return;
-    }
-    try {
-        const sticker = await guild.stickers.fetch(stickerId);
-        if (!sticker) throw new Error('Không tìm thấy sticker.');
-        // Gửi sticker bằng cách dùng URL của sticker
-        const url = `https://cdn.discordapp.com/stickers/${sticker.id}.png`;
-        for (let i = 0; i < 20; i++) {
-            await channel.send({ files: [url] });
-            await wait(500);
+        for(let e of entities) e.draw(battleCtx);
+        for(let p of projectiles){
+          battleCtx.fillStyle=p.color;
+          battleCtx.fillText(p.char,p.x,p.y);
         }
-        console.log(chalk.green('✔ Đã spam sticker.'));
-    } catch (e) { console.log(chalk.red('✗ Lỗi: ' + e.message)); }
-    await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter' }]);
-}
+        battleAnimId=requestAnimationFrame(battleLoop);
+      }
 
-// ================= WEBHOOK WAR =================
-async function createWebhookBots(channel, names, avatars) {
-    const webhooks = [];
-    const defaultNames = [
-        'YSL PRIME 🔥', 'YSL VENOM 💀', 'YSL PHANTOM 👻', 'YSL DEMON 😈',
-        'YSL LXR-5 ⚡', 'YSL SAVAGE 🦍', 'YSL TITAN 🛡️', 'YSL NIGHTMARE 🌙'
-    ];
-    const defaultAvatars = [
-        'https://cdn.discordapp.com/avatars/0/default.webp',
-        'https://cdn.discordapp.com/avatars/0/default.webp',
-        'https://cdn.discordapp.com/avatars/0/default.webp',
-        'https://cdn.discordapp.com/avatars/0/default.webp'
-    ];
+      function startAnimeBattle(){
+        if(battleActive) return;
+        resizeBattle();
+        entities=[];projectiles=[];particles=[];
+        coreHp=20;bossSpawned=false;bossEntity=null;phase=0;
+        spawnWave(0);
+        battleActive=true;
+        battleStartTime=performance.now();
+        battleCanvas.style.display='block';
+        playBgMusic();
+        if(battleAnimId) cancelAnimationFrame(battleAnimId);
+        battleAnimId=requestAnimationFrame(battleLoop);
+      }
 
-    for (let i = 0; i < 4; i++) {
-        const name = names[i] || defaultNames[i % defaultNames.length];
-        const avatar = avatars[i] || defaultAvatars[i % defaultAvatars.length];
-        try {
-            const wh = await channel.createWebhook({
-                name: name,
-                avatar: avatar,
-                reason: 'YSL LXR-5 Fake Bot'
-            });
-            webhooks.push(wh);
-            console.log(chalk.green(`✔ Tạo webhook: ${wh.name}`));
-        } catch (e) {
-            console.log(chalk.red(`✗ Lỗi tạo webhook ${name}: ${e.message}`));
+      // ========== FIREWORK BUTTON ==========
+      document.getElementById('firework-btn').addEventListener('click', () => {
+        for(let i=0;i<50;i++){
+          let x=Math.random()*window.innerWidth;
+          let y=Math.random()*window.innerHeight*0.6;
+          let color='#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0');
+          let p={x,y,vx:(Math.random()-0.5)*400,vy:(Math.random()-0.5)*400,life:1,color,char:String.fromCharCode(0x30A0+Math.random()*96)};
+          // Thêm particle vẽ lên battle canvas? Ta sẽ dùng overlay tạm thời lên body
+          // Đơn giản: tạo div? Nhưng ta dùng canvas nền? Thôi dùng battle canvas ẩn ko tốt, ta sẽ tạo hiệu ứng tạm trên body bằng CSS animation đơn giản hoặc dùng canvas riêng.
+          // Giải pháp: vẽ lên battle canvas vì nó đang ẩn? Không, ta tạo 1 canvas riêng cho pháo hoa hoặc đơn giản là thêm div động. Nhưng để code gọn, ta dùng battle canvas luôn: nếu battle đang active thì ko làm gì, còn ko thì hiện battle canvas để vẽ pháo hoa trong 2s.
         }
-        await wait(100);
-    }
-    return webhooks;
-}
-
-async function warSpam() {
-    showBanner();
-    console.log(boxen(chalk.magenta('◆ CHIẾN TRANH WEBHOOK SIÊU ỨC CHẾ'), { padding: 1, borderColor: 'magenta' }));
-    
-    const answers = await inquirer.prompt([
-        { type: 'input', name: 'guildId', message: '🆔 ID Server chứa kênh:' },
-        { type: 'input', name: 'channelId', message: '🆔 ID Kênh để tạo webhook và spam:' },
-        { type: 'input', name: 'targetUserId', message: '👤 ID Người dùng cần @mention:' },
-        { type: 'number', name: 'messageCount', message: '🔢 Số tin nhắn mỗi webhook:', default: 10 },
-        { type: 'input', name: 'imageUrl', message: '🖼️ Link ảnh kèm mỗi tin (bỏ trống nếu không):' }
-    ]);
-
-    const guild = client.guilds.cache.get(answers.guildId);
-    if (!guild) {
-        console.log(chalk.red('Bot không ở server này.'));
-        await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter' }]);
-        return;
-    }
-    const channel = guild.channels.cache.get(answers.channelId);
-    if (!channel || !channel.isTextBased()) {
-        console.log(chalk.red('Kênh không hợp lệ.'));
-        await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter' }]);
-        return;
-    }
-
-    console.log(chalk.yellow('◆ Nhập thông tin cho 4 webhook giả bot (bỏ trống để dùng mặc định):\n'));
-    const botNames = [];
-    const botAvatars = [];
-    for (let i = 1; i <= 4; i++) {
-        const { name, avatar } = await inquirer.prompt([
-            { type: 'input', name: 'name', message: `✏️  Tên bot ${i}:`, default: `YSL_LXR5_${i}` },
-            { type: 'input', name: 'avatar', message: `🖼️  Link avatar bot ${i} (để trống dùng mặc định):` }
-        ]);
-        botNames.push(name);
-        botAvatars.push(avatar);
-    }
-
-    const webhooks = await createWebhookBots(channel, botNames, botAvatars);
-    if (webhooks.length === 0) {
-        console.log(chalk.red('Không thể tạo webhook.'));
-        await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter' }]);
-        return;
-    }
-
-    const warMessages = [
-        `<@${answers.targetUserId}> mày là thằng óc chó, bất tài vô dụng, cút mẹ mày đi =)) 😂🖕`,
-        `<@${answers.targetUserId}> nhìn mặt mày như cục cứt, YSL bố mày đây đéo ngán ai =)) 💩👊`,
-        `<@${answers.targetUserId}> con đĩ mẹ mày, về bú cu bố mày đi =)) 🍼👶`,
-        `<@${answers.targetUserId}> mày là loài súc vật hạ đẳng, YSL sẽ địt nát lỗ đít mày =)) 🍑🔨`,
-        `<@${answers.targetUserId}> óc chó à? đây là nhà của YSL, bố mày đang đái vào mặt mày đấy =)) 💦🤡`,
-        `<@${answers.targetUserId}> thằng mặt lồn, YSL chơi mày như chơi chó, không tha đâu =)) 😈🔥`,
-        `<@${answers.targetUserId}> mày chỉ là thằng rác rưởi, YSL sẽ chà đạp mày cho đến chết =)) 🚮⚰️`,
-        `<@${answers.targetUserId}> địt mẹ mày, YSL on top, mày là cái lỗ đít của xã hội =)) 😎🕳️`,
-        `<@${answers.targetUserId}> mày nghĩ mày là ai? YSL sẽ hiếp dâm danh dự mày từng giây =)) ⚔️💀`,
-        `<@${answers.targetUserId}> câm mồm đi con chó ghẻ, YSL đang đánh dấu lãnh thổ, biến mẹ mày đi =)) 🐕‍🦺🤬`,
-        `<@${answers.targetUserId}> mày sắp khóc chưa con đĩ? YSL bố mày thương tình tặng mày vé về địa ngục =)) 🔥🎫`,
-        `<@${answers.targetUserId}> đồ phế vật, YSL nện mày ra bã, không ngóc đầu lên được đâu =)) 🤕💢`,
-        `<@${answers.targetUserId}> mày là đứa con hoang của tạo hóa, YSL xóa sổ mày ngay lập tức =)) ❌🧹`,
-        `<@${answers.targetUserId}> nghe rõ chưa thằng ngu? YSL muôn đời vĩ đại, mày mãi là con sâu cái kiến =)) 🐛🐜`,
-        `<@${answers.targetUserId}> mày sống làm gì cho chật đất, YSL giúp mày đi đầu thai sớm nhé =)) 👼💉`,
-        `<@${answers.targetUserId}> YSL LXR-5 đã có mặt, mày chỉ là hạt bụi trên con đường bá sàn =)) 🌌👑`,
-        `<@${answers.targetUserId}> đừng cố vùng vẫy, mày càng chống cự càng thấy mình ngu ngốc thôi =)) 🐟🎣`,
-        `<@${answers.targetUserId}> mày là nỗi nhục của cộng đồng, YSL khai tử mày ngay lập tức =)) ⚰️💀`,
-        `<@${answers.targetUserId}> đời mày là một chuỗi những thất bại, và YSL sẽ chấm dứt nó =)) 🔚🔪`,
-        `<@${answers.targetUserId}> mày không đáng để YSL phải ra tay, nhưng vì quá rảnh nên tao chơi mày =)) 😴🤏`
-    ];
-
-    console.log(chalk.magenta('◆ BẮT ĐẦU SPAM WAR...'));
-    const tasks = [];
-    for (const wh of webhooks) {
-        const wc = new WebhookClient({ url: wh.url });
-        for (let i = 0; i < answers.messageCount; i++) {
-            const msg = warMessages[Math.floor(Math.random() * warMessages.length)];
-            tasks.push(async () => {
-                try {
-                    const payload = { content: msg, allowedMentions: { parse: ['users'] } };
-                    if (answers.imageUrl) {
-                        payload.embeds = [new EmbedBuilder().setImage(answers.imageUrl).setColor('#FF1493')];
-                    }
-                    await wc.send(payload);
-                    console.log(chalk.green(`✔ ${wh.name}: tin ${i+1}`));
-                } catch (e) {
-                    console.log(chalk.yellow(`  Lỗi ${wh.name}: ${e.message}`));
-                }
-            });
+        // Đơn giản: dùng class CSS tạo chữ rơi? Ta sẽ tạo một số div động.
+        for(let i=0;i<30;i++){
+          let div=document.createElement('div');
+          div.textContent=String.fromCharCode(0x30A0+Math.random()*96);
+          div.style.position='fixed';
+          div.style.left=Math.random()*100+'vw';
+          div.style.top='-20px';
+          div.style.color='#'+Math.floor(Math.random()*16777215).toString(16);
+          div.style.fontSize='24px';
+          div.style.zIndex='20';
+          div.style.animation='fall 2s linear forwards';
+          document.body.appendChild(div);
+          setTimeout(()=>div.remove(),2000);
         }
-    }
-    await runWithConcurrency(tasks, 40, 50);
-    console.log(boxen(chalk.green('✔ ĐÃ THẢM SÁT!'), { padding: 1, borderColor: 'green' }));
-    await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter' }]);
-}
-
-// ================= MENU =================
-async function nukerMenu(guild) {
-    if (!(await checkAdmin(guild))) {
-        console.log(chalk.red('Bot không có quyền Admin!'));
-        await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter' }]);
-        return;
-    }
-    while (true) {
-        showBanner();
-        console.log(boxen(chalk.bgRed.white(' SERVER: ' + guild.name + ' '), { padding: 1, borderColor: 'red' }));
-        const { m } = await inquirer.prompt([{ type: 'list', name: 'm', message: 'DANH MỤC:', choices: [
-            { name: '💥 SUPER NUKE', value: 'sn' },
-            { name: '📢 RAID & SPAM', value: 'raid' },
-            { name: '🔧 PHÁ HỦY RIÊNG', value: 'destroy' },
-            { name: '⚙️ QUẢN LÝ', value: 'manage' },
-            { name: '📊 SERVER INFO', value: 'info' },
-            { name: '🛠️ TIỆN ÍCH NÂNG CAO', value: 'utils' },
-            { name: '💌 MASS DM', value: 'massdm' },
-            { name: '😎 AUTO REACT', value: 'autoreact' },
-            { name: '🏷️ SPAM STICKER', value: 'spamsticker' },
-            { name: '🚪 THOÁT', value: 'exit' }
-        ]}]);
-        if (m === 'exit') break;
-        switch (m) {
-            case 'sn': await superNuke(guild); break;
-            case 'raid': await raidMenu(guild); break;
-            case 'destroy': await destroyMenu(guild); break;
-            case 'manage': await manageMenu(guild); break;
-            case 'info': await serverInfo(guild); break;
-            case 'utils': await utilsMenu(guild); break;
-            case 'massdm': await massDM(); break;
-            case 'autoreact': await autoReact(); break;
-            case 'spamsticker': await spamSticker(guild); break;
+        // Thêm keyframe fall
+        if(!document.getElementById('fall-style')){
+          let style=document.createElement('style');
+          style.id='fall-style';
+          style.textContent=`@keyframes fall{0%{opacity:1;transform:translateY(0) rotate(0deg);}100%{opacity:0;transform:translateY(100vh) rotate(360deg);}}`;
+          document.head.appendChild(style);
         }
-    }
-}
-
-async function raidMenu(guild) {
-    while (true) {
-        showBanner();
-        console.log(boxen(chalk.bgMagenta(' RAID & SPAM '), { padding: 1, borderColor: 'magenta' }));
-        const { a } = await inquirer.prompt([{ type: 'list', name: 'a', message: 'HÀNH ĐỘNG:', choices: [
-            { name: '1. Spam kênh + Raid', value: 'spamRaid' },
-            { name: '2. Raid toàn bộ kênh', value: 'raidAll' },
-            { name: '3. Spam role', value: 'spamRoles' },
-            { name: '4. Purge kênh', value: 'purge' },
-            { name: '0. Quay lại', value: 'back' }
-        ]}]);
-        if (a === 'back') break;
-        switch (a) {
-            case 'spamRaid': await spamAndRaid(guild); break;
-            case 'raidAll': await raidAll(guild); break;
-            case 'spamRoles': await spamR(guild); break;
-            case 'purge': await purgeCh(guild); break;
-        }
-        await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter' }]);
-    }
-}
-async function destroyMenu(guild) {
-    while (true) {
-        showBanner();
-        console.log(boxen(chalk.bgRed(' PHÁ HỦY RIÊNG '), { padding: 1, borderColor: 'red' }));
-        const { a } = await inquirer.prompt([{ type: 'list', name: 'a', message: 'MỤC TIÊU:', choices: [
-            { name: '1. Xóa toàn bộ kênh', value: 'delChan' },
-            { name: '2. Xóa toàn bộ role', value: 'delRoles' },
-            { name: '3. Xóa toàn bộ emoji', value: 'delEmoji' },
-            { name: '4. Xóa toàn bộ sticker', value: 'delSticker' },
-            { name: '5. Xóa toàn bộ invite', value: 'delInvites' },
-            { name: '6. Xóa toàn bộ webhooks', value: 'delWebhooks' },
-            { name: '7. Ban tất cả', value: 'banAll' },
-            { name: '8. Kick tất cả', value: 'kickAll' },
-            { name: '0. Quay lại', value: 'back' }
-        ]}]);
-        if (a === 'back') break;
-        switch (a) {
-            case 'delChan': await delAllChannels(guild); break;
-            case 'delRoles': await delAllRoles(guild); break;
-            case 'delEmoji': await delAllEmojis(guild); break;
-            case 'delSticker': await delAllStickers(guild); break;
-            case 'delInvites': await delAllInvites(guild); break;
-            case 'delWebhooks': await delAllWebhooks(guild); break;
-            case 'banAll': await banAll(guild); break;
-            case 'kickAll': await kickAll(guild); break;
-        }
-        await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter' }]);
-    }
-}
-async function manageMenu(guild) {
-    while (true) {
-        showBanner();
-        console.log(boxen(chalk.bgCyan(' QUẢN LÝ '), { padding: 1, borderColor: 'cyan' }));
-        const { a } = await inquirer.prompt([{ type: 'list', name: 'a', message: 'HÀNH ĐỘNG:', choices: [
-            { name: '1. Đổi tên', value: 'rename' },
-            { name: '2. Đổi icon', value: 'icon' },
-            { name: '0. Quay lại', value: 'back' }
-        ]}]);
-        if (a === 'back') break;
-        if (a === 'rename') await renameG(guild);
-        if (a === 'icon') await chIcon(guild);
-        await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter' }]);
-    }
-}
-async function utilsMenu(guild) {
-    while (true) {
-        showBanner();
-        console.log(boxen(chalk.bgCyan(' TIỆN ÍCH NÂNG CAO '), { padding: 1, borderColor: 'cyan' }));
-        const { a } = await inquirer.prompt([{ type: 'list', name: 'a', message: 'Chọn:', choices: [
-            { name: '1. Dọn dẹp Webhooks', value: 'cleanWebhooks' },
-            { name: '2. Gửi tin nhắn đến tất cả kênh', value: 'massMsg' },
-            { name: '3. Reaction vào tin nhắn', value: 'react' },
-            { name: '4. Sao chép kênh', value: 'clone' },
-            { name: '5. Tạo Invite', value: 'invite' },
-            { name: '6. Đổi Nickname Bot', value: 'nick' },
-            { name: '7. Di chuyển tất cả Voice', value: 'moveVoice' },
-            { name: '0. Quay lại', value: 'back' }
-        ]}]);
-        if (a === 'back') break;
-        switch (a) {
-            case 'cleanWebhooks': await cleanupWebhooks(guild); break;
-            case 'massMsg': await massMessageToAllChannels(guild); break;
-            case 'react': await massReact(guild); break;
-            case 'clone': await cloneChannel(guild); break;
-            case 'invite': await createInvite(guild); break;
-            case 'nick': await changeBotNickname(guild); break;
-            case 'moveVoice': await massMoveVoice(guild); break;
-        }
-        await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter' }]);
-    }
-}
-async function serverInfo(guild) {
-    showBanner();
-    console.log(boxen(chalk.cyan(`◆ THÔNG TIN SERVER: ${guild.name}`), { padding: 1, borderColor: 'cyan' }));
-    try {
-        const owner = await guild.fetchOwner();
-        console.log(chalk.green(`  Tên: ${guild.name}`));
-        console.log(chalk.green(`  ID: ${guild.id}`));
-        console.log(chalk.green(`  Owner: ${owner.user.tag} (${guild.ownerId})`));
-        console.log(chalk.green(`  Thành viên: ${guild.memberCount}`));
-        console.log(chalk.green(`  Kênh: ${guild.channels.cache.size}`));
-        console.log(chalk.green(`  Role: ${guild.roles.cache.size - 1}`));
-        console.log(chalk.green(`  Emoji: ${guild.emojis.cache.size}`));
-        console.log(chalk.green(`  Sticker: ${guild.stickers.cache.size}`));
-        console.log(chalk.green(`  Boost Tier: ${guild.premiumTier}`));
-        console.log(chalk.green(`  Ngày tạo: ${guild.createdAt.toLocaleString()}`));
-    } catch (e) {
-        console.log(chalk.red('✗ Không thể lấy đầy đủ thông tin.'));
-    }
-    await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵ Enter về menu' }]);
-}
-
-// ================= MENU CHÍNH =================
-async function mainMenu() {
-    while (true) {
-        showBanner();
-        const hangWarStatus = hangWarInterval ? 'ĐANG CHẠY' : 'TẮT';
-        const { choice } = await inquirer.prompt([{
-            type: 'list', name: 'choice', message: 'YSL LXR-5 • BÁ SÀN DISCORD',
-            choices: [
-                { name: '👤  1. Thiết lập Bot', value: 'info' },
-                { name: '💣  2. Kích hoạt Nuker (chọn server)', value: 'nuker' },
-                { name: '🔥  3. Spam War Webhook (giả bot)', value: 'war' },
-                { name: `🔊 4. Auto War Reply: ${autoWarEnabled ? 'BẬT' : 'TẮT'}`, value: 'toggleWar' },
-                { name: `⏰ 5. Treo Ngôn (Hang War): ${hangWarStatus}`, value: 'hangWar' },
-                { name: '📎  6. Gửi File/Ảnh Embed', value: 'sendFile' },
-                { name: '💌  7. Mass DM', value: 'massDM' },
-                { name: '🚪  8. Thoát', value: 'exit' }
-            ]
-        }]);
-        switch (choice) {
-            case 'info': await setBotInfo(); break;
-            case 'nuker': {
-                const { id } = await inquirer.prompt([{ type: 'input', name: 'id', message: '🆔 ID Server:' }]);
-                const guild = client.guilds.cache.get(id);
-                if (!guild) { console.log(chalk.red('Không có mặt')); await inquirer.prompt([{ type: 'input', name: 'ok', message: '↵' }]); }
-                else await nukerMenu(guild);
-                break;
-            }
-            case 'war': await warSpam(); break;
-            case 'toggleWar': await toggleAutoWar(); break;
-            case 'hangWar': await hangWarMenu(); break;
-            case 'sendFile': await sendAttachment(); break;
-            case 'massDM': await massDM(); break;
-            case 'exit': {
-                if (hangWarInterval) clearInterval(hangWarInterval);
-                console.log(chalk.green('👋 Tạm biệt!'));
-                process.exit(0);
-            }
-        }
-    }
-}
-
-async function hangWarMenu() {
-    while (true) {
-        showBanner();
-        const status = hangWarInterval ? `ĐANG CHẠY (${hangWarConfig.intervalMs/1000}s)` : 'TẮT';
-        const { act } = await inquirer.prompt([{
-            type: 'list', name: 'act', message: `Treo Ngôn hiện tại: ${status}`,
-            choices: [
-                { name: '1. Bắt đầu Treo Ngôn', value: 'start' },
-                { name: '2. Dừng Treo Ngôn', value: 'stop' },
-                { name: '0. Quay lại', value: 'back' }
-            ]
-        }]);
-        if (act === 'back') break;
-        if (act === 'start') await startHangWar();
-        if (act === 'stop') await stopHangWar();
-    }
-}
-
-(async () => {
-    const token = await getToken();
-    client.once('ready', () => {
-        console.log(chalk.green('✔ Bot online: ' + client.user.tag));
-        mainMenu();
-    });
-    client.login(token).catch(e => {
-        console.log(chalk.red('Token lỗi: ' + e.message));
-        delete config.token; saveConfig(); process.exit(1);
-    });
-})();
+      });
+    })();
+  </script>
+</body>
+</html>
